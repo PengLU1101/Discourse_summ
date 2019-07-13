@@ -1,12 +1,12 @@
 """
 Implementation of "Attention is All You Need"
 """
-
+import torch
 import torch.nn as nn
 
-from onmt.encoders.encoder import EncoderBase
-from onmt.modules import MultiHeadedAttention
-from onmt.modules.position_ffn import PositionwiseFeedForward
+from Encoder import EncoderBase
+from MultiHeadedAttention import MultiHeadedAttention
+from position_ffn import PositionwiseFeedForward
 
 
 class TransformerEncoderLayer(nn.Module):
@@ -87,7 +87,13 @@ class TransformerEncoder(EncoderBase):
         * memory_bank ``(src_len, batch_size, model_dim)``
     """
 
-    def __init__(self, num_layers, d_model, heads, d_ff, dropout, embeddings,
+    def __init__(self,
+                 num_layers,
+                 d_model,
+                 heads,
+                 d_ff,
+                 dropout,
+                 embeddings,
                  max_relative_positions):
         super(TransformerEncoder, self).__init__()
 
@@ -112,7 +118,12 @@ class TransformerEncoder(EncoderBase):
             opt.max_relative_positions)
 
     def forward(self, src, lengths=None):
-        """See :func:`EncoderBase.forward()`"""
+        """
+        Args:
+            src (LongTensor):
+               padded sequences of sparse indices ``(src_len, batch, nfeat)``
+            lengths (LongTensor): length of each sequence ``(batch,)``"""
+
         self._check_args(src, lengths)
 
         emb = self.embeddings(src)
@@ -133,3 +144,29 @@ class TransformerEncoder(EncoderBase):
         self.embeddings.update_dropout(dropout)
         for layer in self.transformer:
             layer.update_dropout(dropout)
+
+
+def test():
+    emb = nn.Embedding(1000, 128, 0)
+    model = TransformerEncoder(num_layers=2,
+                               d_model=128,
+                               heads=16,
+                               d_ff=8,
+                               dropout=0.5,
+                               embeddings=emb,
+                               max_relative_positions=100)
+    #print(model)
+    ipt = torch.empty((16, 10, 1), dtype=torch.long).random_(1000)
+    print(ipt)
+    embs, outs, lengths = model(ipt)
+    print("embs")
+    print(embs)
+    print("outs")
+    print(outs)
+    print("lengths")
+    print(lengths)
+
+
+
+if __name__ == "__main__":
+    test()

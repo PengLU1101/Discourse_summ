@@ -3,7 +3,7 @@ import math
 import torch
 import torch.nn as nn
 
-from onmt.utils.misc import generate_relative_positions_matrix,\
+from utils.misc import generate_relative_positions_matrix,\
                             relative_matmul
 # from onmt.utils.misc import aeq
 
