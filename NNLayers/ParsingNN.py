@@ -66,7 +66,6 @@ def test():
 						 resolution=0.1,
 						 dropout=0.5)
 	a, b = pmodel.init_hidden(100)
-	print("What the fuck", a.requires_grad)
 
 
 if __name__ == "__main__":
