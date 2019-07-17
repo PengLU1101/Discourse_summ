@@ -47,6 +47,13 @@ class Parsing_Net(nn.Module):
 			memory_gate = (F.hardtanh((gate[:, :, None] - gate_hat) / self.resolution * 2 + 1) + 1) / 2
 		else:
 			memory_gate = F.sigmoid((gate[:, :, None] - gate_hat) / self.resolution * 10 + 5)
+		memory_gate = torch.cumprod(memory_gate, dim=2)
+		memory_gate = torch.unbind(memory_gate, dim=1)
+
+		if self.hard:
+			memory_gate_next = (F.hardtanh((gate_next[:, :, None] - gate_hat) / self.resolution * 2 + 1) + 1) / 2
+		else:
+			memory_gate_next = F.sigmoid((gate_next[:, :, None] - gate_hat) / self.resolution * 10 + 5)
 		memory_gate_next = torch.cumprod(memory_gate_next, dim=2)
 		memory_gate_next = torch.unbind(memory_gate_next, dim=1)
 
