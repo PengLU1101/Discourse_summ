@@ -4,7 +4,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.probability import FreqDist
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, OrderedDict
 
 from nltk.stem.wordnet import WordNetLemmatizer
 lem = WordNetLemmatizer()
@@ -14,58 +14,92 @@ stem = PorterStemmer()
 
 path = '/u/lupeng/Project/code/OpenNMT-py/data/cnndm/cnndm'
 
-
-def get_sent_list(path_r, path_w):
-    if os.path.isfile(path_w):
-        with open(path_w, 'r') as f:
-            doc_list = pickle.load(f)
+def get_tokenized_sent(sent_lists):
+    if len(sent_lists):
+        return [["<sent>"] + word_tokenize(x) + ["</sent>"] for x in sent_lists]
     else:
-        with open(path_r, 'r') as f:
-        #line = f.readline()
-        #token_txt = sent_tokenize(line)
-        #for i, x in enumerate(token_txt):
-        #    print(i, "<s>" + x + "<\s>")
-        #print(len(token_txt))
-        #print(line)
-            doc_list = []
-            i = 1
-            for line in tqdm(f.readlines()):
-                token_sents = sent_tokenize(line)
-                doc = " ".join([x + "<s>" for x in token_sents])
-                doc_list.append(word_tokenize(doc))
-                if i == 1:
-                    lll = word_tokenize(doc)
-                    print(lll)
-                    i = 0
-                    print(len(lll))
-            with open(path_w, 'w') as f_w:
-                print("start writing...")
-                pickle.dump(doc_list, f_w)
-    return doc_list
+        return []
 
 
-def get_freq_dict(doc_list):
-    freq_dict = defaultdict(int)
-    print('Getting freq_dict...')
-    for doc in tqdm(doc_list):
-        for word in doc:
-            freq_dict[word] += 1
-    count_freq5 = 0
-    count_freq50 = 0
-    for x, y in freq_dict.items():
-        if y < 5:
-            count_freq5 += 1 
-        if y < 50:
-            count_freq50 += 1
-    print("freq < 5", count_freq5/len(freq_dict))
-    print("freq < 50", count_freq50/len(freq_dict))
-    return freq_dict
+def build_sentlist(file_dict, vocab=None, word2id=None):
+    if (not word2id) and (not vocab):
+        word2id = OrderedDict([('<pad>', 0), ('<unk>', 1), ('<sent>', 2), ('</sent>', 3)])
+        vocab = defaultdict(int)
+    src_token, tgt_token = [], []
+
+    with open(os.path.join(path, file_dict['src']), 'r') as f_src, open(os.path.join(path, file_dict['tgt']),
+                                                                        'r') as f_tgt:
+        for src, tgt in tqdm_notebook(zip(f_src, f_tgt)):
+            tokened_src_list = get_tokenized_sent(sent_tokenize(src.lower().strip()))
+            tokened_tgt_list = get_tokenized_sent(sent_tokenize(tgt.lower().strip()))
+
+            for word_list in tokened_src_list:
+                for word in word_list:
+                    vocab[word] += 1
+                    if word not in word2id:
+                        word2id[word] = len(word2id)
+            for word_list in tokened_tgt_list:
+                for word in word_list:
+                    vocab[word] += 1
+                    if word not in word2id:
+                        word2id[word] = len(word2id)
+
+            if len(tokened_src_list) and len(tokened_src_list[0]) and len(tokened_tgt_list) and len(
+                    tokened_tgt_list[0]):
+                src_token.append(tokened_src_list)
+                tgt_token.append(tokened_tgt_list)
+    return vocab, word2id, src_token, tgt_token
+
+def combine_list_dict(src, tgt):
+    return  {'src': src, 'tgt': tgt}
+
+def build_pkl(files_dict, path, save_dict):
+    path_vocab = os.path.join(path, save_dict['vocab'])
+    if os.path.isfile(path_vocab):
+        vocab = read_pkl(path_vocab)
+        #with open(path_vocab, 'rb') as f:
+        #    vocab = pickle.load(f)
+    else:
+        vocab = {}
+    path_data = os.path.join(path, save_dict['data'])
+    if os.path.isfile(path_data):
+        data = read_pkl(path_data)
+        #with open(path_data, 'rb') as f:
+        #    data = pickle.load(f)
+    else:
+        data = {}
+    if vocab and data:
+        print("Vocabulary and processed files exist.")
+        print("Vocab file size %d M" %(os.path.getsize(path_vocab) >> 20))
+        print("Processed file size %d M" % (os.path.getsize(path_data) >> 20))
+
+    else:
+        vocab, word2id, test_src_token, test_tgt_token = build_pkl(test_file_dict)
+        vocab, word2id, val_src_token, val_tgt_token = build_pkl(val_file_dict, vocab, word2id)
+        vocab, word2id, train_src_token, train_tgt_token = build_pkl(train_file_dict, vocab, word2id)
+
+        data = {'word2id': word2id,
+                'train_token': combine_list_dict(train_src_token, train_tgt_token),
+                'val_token': combine_list_dict(val_src_token, val_tgt_token),
+                'test_token': combine_list_dict(test_src_token, test_tgt_token)
+               }
 
 
-    #with open(path+'/train.txt.src_with_sent', 'w') as f_w:
-    #    print("start writing...")
-    #    f_w.write("\n".join(doc_list))
-    #+'/train.txt.src'
+
+
+def read_pkl(path):
+    with open(path, "rb") as f:
+        data_dict = pickle.load(f)
+    return data_dict
+
+def save_pkl(path, file):
+    with open(path, 'wb+') as f:
+        pickle.dump(file, f)
+
+
+
+
+
 def main():
     path = '/u/lupeng/Project/code/OpenNMT-py/data/cnndm/cnndm'
     path_r = path + '/train.txt.src'

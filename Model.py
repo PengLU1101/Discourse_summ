@@ -14,14 +14,14 @@ from NNLayers.ParsingNN import Parsing_Net
 class PEmodel(nn.module):
     def __init__(self,
                  embedding_layer,
-                 encoder_layer,
-                 parsing_layer,
-                 infer_layer):
+                 encoder,
+                 parser,
+                 predictor):
         super(PEmodel, self).__init__()
         self.embedding_layer = embedding_layer
-        self.encoder_layer = encoder_layer
-        self.parsing_layer = parsing_layer
-        self.infer_layer = infer_layer
+        self.encoder = encoder
+        self.parser = parser
+        self.predictor = predictor
 
     def forward(self):
         pass
@@ -29,13 +29,16 @@ class PEmodel(nn.module):
 
 def build_model(para):
     assert isinstance(para, namedtuple)
+    embedding_layer = Embeddings(word_vec_size=para.emb_dim,
+                                 word_vocab_size=para.voc_size,
+                                 )
 
-    return PEmodel(embedding_layer, encoder_layer, parsing_layer, infer_layer)
+    return PEmodel(embedding_layer, encoder, parser, predictor)
 
 
 def test():
     pass
 
 
-if __name__ = "__main__":
+if __name__ == "__main__":
     test()
