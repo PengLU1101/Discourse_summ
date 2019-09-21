@@ -7,7 +7,7 @@ import torch.nn as nn
 from Encoder import EncoderBase
 from MultiHeadedAttention import MultiHeadedAttention
 from position_ffn import PositionwiseFeedForward
-
+from Embeddings import Embeddings
 
 class TransformerEncoderLayer(nn.Module):
     """
@@ -147,7 +147,7 @@ class TransformerEncoder(EncoderBase):
 
 
 def test():
-    emb = nn.Embedding(1000, 128, 0)
+    emb = Embeddings(128, 1000, 0)
     model = TransformerEncoder(num_layers=2,
                                d_model=128,
                                heads=16,
@@ -157,12 +157,11 @@ def test():
                                max_relative_positions=100)
     #print(model)
     ipt = torch.empty((16, 10, 1), dtype=torch.long).random_(1000)
-    print(ipt)
     embs, outs, lengths = model(ipt)
     print("embs")
-    print(embs)
+    print(embs.size())
     print("outs")
-    print(outs)
+    print(outs.size())
     print("lengths")
     print(lengths)
 

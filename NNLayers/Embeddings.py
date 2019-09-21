@@ -5,7 +5,7 @@ import warnings
 import torch
 import torch.nn as nn
 
-from utlis.misc import Elementwise
+from utils.misc import Elementwise
 
 
 class PositionalEncoding(nn.Module):

@@ -2,83 +2,133 @@ import numpy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
+from torch import Tensor as T
 
-class Parsing_Net(nn.Module):
-	def __init__(self, 
-				 dim_in,
-				 dim_hid,
-				 n_slots=5,
-				 n_lookback=1,
-				 resolution=0.1,
-				 dropout=0.5):
-		super(Parsing_Net, self).__init__()
+from typing import List, Tuple
 
-		self.dim_in = dim_in
-		self.dim_hid = dim_hid
-		self.n_slots = n_slots
-		self.n_lookback = n_lookback
-		self.resolution = resolution
+import numpy as np
 
-		self.Dropout = nn.Dropout(dropout)
+class Score_Net(nn.Module):
+    def __init__(self,
+                 dim_in: int,
+                 dropout: float,
+                 score_type : str ='dot') -> None:
+        super(Score_Net, self).__init__()
+        self.dim_in = dim_in
+        self.dropout = dropout
+        self.score_type = score_type
+        self.Dropout = nn.Dropout(dropout)
 
-		self.layer = nn.Sequential(nn.Dropout(dropout),
-								   nn.Conv1d(dim_in, dim_hid, (n_lookback + 1)),
-								   nn.BatchNorm1d(dim_hid),
-								   nn.ReLU(),
-								   nn.Dropout(dropout),
-								   nn.Conv1d(dim_hid, 2, 1, groups=2),
-								   nn.Sigmoid())
+        if score_type == 'bilinear':
+            self.score_func = nn.Bilinear(dim_in, dim_in, 1)
+        elif score_type == 'dot':
+            self.score_func = torch.bmm
 
-	def forward(self, emb, parser_state):
-		emb_last, cum_gate = parser_state # emb_last: n_lookback x bsz x d_emb
-										  # cum_gate: bsz x n_slots
-		ntimestep = emb.size(0)
+        self.init_para()
 
-		emb_last = torch.cat([emb_last, emb], dim=0) # (n_lookback + ntimestep) x bsz x d_emb
-		emb = emb_last.transpose(0, 1).transpose(1, 2) # bsz x d_emb x (n_lookback + ntimestep)
+    def forward(self, rep_srcs: List[T]) -> T:
+        #assert rep_srcs.size(0)
+        rep_with_head = torch.cat(tuple(map(self.cat_h, rep_srcs)), dim=0)[:, None, :] # (B x seq) x 1 x dim_hid
+        rep_with_tail = torch.cat(tuple(map(self.cat_t, rep_srcs)), dim=0)[:, None, :]
+        score = self.score_func(rep_with_head, self.Dropout(rep_with_tail)) # (B x seq) x 1 x 1
 
-		gates = self.layer(emb) # bsz x 2 x ntimestep
-		gate = gates[:, 0, :] # bsz x ntimestep
-		gate_next = gates[:, 1, :] # bsz x ntimestep
-		cum_gate = torch.cat([cum_gate, gate], dim=1) # bsz x (n_slots + ntimestep)
-		gate_hat = torch.stack([cum_gate[:, i:i + ntimestep] for i in range(self.nslots, 0, -1)], dim=2)
+        return score.squeeze(-1).squeeze(-1) # (B x seq)
 
-		if self.hard:
-			memory_gate = (F.hardtanh((gate[:, :, None] - gate_hat) / self.resolution * 2 + 1) + 1) / 2
-		else:
-			memory_gate = F.sigmoid((gate[:, :, None] - gate_hat) / self.resolution * 10 + 5)
-		memory_gate = torch.cumprod(memory_gate, dim=2)
-		memory_gate = torch.unbind(memory_gate, dim=1)
+    def parsing(self,
+              rep_srcs: List[T],
+              rep_tgts: T) -> T:
+        pass
 
-		if self.hard:
-			memory_gate_next = (F.hardtanh((gate_next[:, :, None] - gate_hat) / self.resolution * 2 + 1) + 1) / 2
-		else:
-			memory_gate_next = F.sigmoid((gate_next[:, :, None] - gate_hat) / self.resolution * 10 + 5)
-		memory_gate_next = torch.cumprod(memory_gate_next, dim=2)
-		memory_gate_next = torch.unbind(memory_gate_next, dim=1)
+    def cat_h(self, rep: T) -> T:
+        """
+        Cat a head rep. to the rep. of sents of a doc. To get a Tensor: [head, s1, s2, s3]
+        :param rep: num_sent x dim_hid
+        :return: rep_with_head: (num_sent + 1) x dim_hid
+        """
+        return torch.cat([self.head, rep], dim=0)
+    def cat_t(self, rep: T) -> T:
+        """
+        Cat a tail rep. to the rep. of sents of a doc. To get a Tensor: [s1, s2, s3, tail]
+        :param rep: num_sent x dim_hid
+        :return: rep_with_head: (num_sent + 1) x dim_hid
+        """
+        return torch.cat([rep, self.tail], dim=0)
 
-		return (memory_gate, memory_gate_next), gate, (emb_last[-self.n_lookback:], cum_gate[:, -self.n_slots:])
+    def init_para(self):
+        scope = np.sqrt(1.0 / self.dim_in)
+        nn.init.uniform(tensor=self.head,
+                        a=-scope,
+                        b=scope)
 
-	def init_hidden(self, batch_size):
-		weight = next(self.parameters()).data
-		for x in list(self.parameters()):
-			print(x.size())
-		self.ones = weight.new(batch_size, 1).zero_() + 1
-		return weight.new(self.n_lookback, batch_size, self.dim_in).zero_(), \
-			   weight.new(batch_size, self.n_slots).zero_() + numpy.inf
+        nn.init.uniform(tensor=self.tail,
+                        a=-scope,
+                        b=scope)
+        if self.score_type == 'bilinear':
+            nn.init.xavier_normal_(self.score_func.weight)
+            nn.init.zeros_(self.score_func.bias)
+
+class Gate_Net(nn.Module):
+    def __init__(self,
+                 dim_in: int,
+                 dropout: float,
+                 resolution: float,
+                 hard: bool) -> None:
+        super(Gate_Net, self).__init__()
+        self.dim = dim_in
+        self.dropout = dropout
+        self.resolution = resolution
+        self.hard = hard
+        self.Dropout = nn.Dropout(dropout)
+
+    def forward(self,
+                score: T,
+                rep_srcs: List[T],
+                rep_idx: List[List[int]]) -> List[Tuple[T]]:
+        score_by_doc = []
+        for idx in score_idx:
+            score_by_doc += [torch.index_select(input=score,
+                                                dim=0,
+                                                index=torch.LongTensor(idx))]
+        gate_list = []
+        for score in score_by_doc:
+            gate_list.append(self.compute_gate(score))
+
+        return gate_list
+
+
+
+    def compute_gate(self,
+                     semantic_score: T) -> Tuple[T]:
+        assert semantic_score.size(0) > 4
+        fwd_score = semantic_score[: -1] # (num_score - 2)
+        bwd_score = semantic_score[1: ]
+        pad_fwd_score = torch.cat([torch.zeros(fwd_score.size(0) - 1), fwd_score], dim=0)
+        pad_bwd_score = torch.cat([bwd_score, torch.zeros(bwd_score.size(0) - 1)], dim=0)
+        fwd_score_hat = torch.stack([pad_fwd_score[i: i + pad_score.size(0)] for i in range(pad_score.size(0) - 1, 0, -1)], dim=1)
+        bwd_score_hat = torch.stack([pad_bwd_score[i: i + pad_score.size(0)] for i in range(1, pad_score.size(0))], dim=1)
+        if self.hard:
+            fwd_gate = (F.hardtanh((score_hat - fwd_score[:, None]) / self.resolution * 2 + 1) + 1) / 2
+            bwd_gate = (F.hardtanh((score_hat - bwd_score[:, None]) / self.resolution * 2 + 1) + 1) / 2
+
+        else:
+            fwd_gate = F.sigmoid((score_hat - fwd_score[:, None]) / self.resolution * 10 + 5)
+            bwd_gate = F.sigmoid((score_hat - bwd_score[:, None]) / self.resolution * 10 + 5)
+        fwd_gate = torch.cumprod(fwd_gate, dim=1) # seq x seq - 1
+        bwd_gate = torch.cumprod(bwd_gate, dim=1) # seq x seq - 1
+
+        return (fwd_gate, bwd_gate)
+
 
 def test():
-	pmodel = Parsing_Net(dim_in=100,
-						 dim_hid=64,
-						 n_slots=5,
-						 n_lookback=1,
-						 resolution=0.1,
-						 dropout=0.5)
-	a, b = pmodel.init_hidden(16)
-	print(a.size())
-	print(b.size())
+    pmodel = Parsing_Net(dim_in=100,
+                         dim_hid=64,
+                         n_slots=5,
+                         n_lookback=1,
+                         resolution=0.1,
+                         dropout=0.5)
+
+    a, b = pmodel.init_hidden(16)
 
 
 if __name__ == "__main__":
-	test()
+    test()
