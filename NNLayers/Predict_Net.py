@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # author：Peng time:2019-09-21
 
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Dict, Callable, Iterator
 
 import torch
 import torch.nn as nn
@@ -18,40 +18,129 @@ StepFunctionType = Callable[[T, StateType], Tuple[T, StateType]]  # pylint: disa
 class Predic_Net(nn.Module):
     def __init__(self,
                  dim_hid: int,
-                 func: str) -> None:
+                 score_type: str) -> None:
         super(Predic_Net, self).__init__()
         self.dim_hid = dim_hid
-        self.func = func
-        if func == 'dot':
-            pass
+        self.score_type = score_type
+        if score_type == 'bilinear':
+            self.func: Callable[[T, T], T] = nn.Bilinear(dim_hid, dim_hid, 1)
         else:
-            self.func = pass
+            self.func: Callable[[T, T], T] = torch.bmm
+        self.init_para()
 
     def forward(self,
                 rep_sents: List[T],
                 gate: List[Tuple[T]],
                 idx: List[List[int]],
                 pos: List[List[int]],
-                neg: List[List[int]]) -> T:
-        fwd_list: List[T] = map(self.get_sm, rep_sents)
-        bwd_list: List[T] =
+                neg: List[Tuple[List[int], List[T]]]) -> List[T]:
+        fwd: Iterator[T] = map(
+            self.get_sm, 
+            rep_sents
+            ) #item h1 h2 h3 h4
+        bwd: Iterator[T] = map(
+            self.get_sm, 
+            [x.flip((0, )) for x in rep_sents]
+            ) #item h3 h2 h1 h0
+        mask: Iterator[T] = map(
+            self.mask_gate,
+            gate
+            )
+        doc_fwd, doc_bwd = self.compute_h(fwd, bwd, mask)
+
+        fwd_h = torch.cat(doc_fwd, dim=0)
+        fwd_pos = torch.cat(
+            [rep[1:, :] for rep in rep_sents],
+            dim=0
+        )
+        fwd_neg = torch.cat([torch.index_select(rep_sents[i],
+                                  dim=0,
+                                  index=torch.LongTensor(neg[i][0])) for i in range(len(neg))],
+                            dim=0
+        )
+        bwd_h = torch.cat(doc_bwd, dim=0)
+        bwd_pos = torch.cat(
+            [rep.flip((0,))[1:, :] for rep in rep_sents],
+            dim=0
+        )
+        bwd_neg = torch.cat([torch.index_select(rep_sents[i],
+                                                dim=0,
+                                                index=torch.LongTensor(neg[i][1])) for i in range(len(neg))],
+                            dim=0
+                            ) ##### ORDER MATTERS!!!!!!!!!!!!!!!!!!!!!11
+        fp_logit = self.cpt_logit(fwd_h, fwd_pos)
+        fn_logit = self.cpt_logit(fwd_h, fwd_neg)
+        bp_logit = self.cpt_logit(bwd_h, bwd_pos)
+        bn_logit = self.cpt_logit(bwd_h, bwd_neg)
+        return [fp_logit, fn_logit, bp_logit, bn_logit]
+
+    def cpt_logit(self, h: T, t: T) -> T:
+        if self.score_type == 'bilinear':
+            logit = self.func(h[:, :, None], t[:, :, None])  # BxNx1
+        else:
+            logit = self.func(h[:, None, :], t[:, :, None])
+        return logit.squeeze(-1).squeeze(-1)
 
 
 
-    def get_sm(self, rep: [T]) -> T:
-        pad_rep = torch.cat([torch.zeros(rep.size(0) - 1, rep.size(1)).to(rep.device), rep], dim=0)
+    def compute_h(self,
+                  fwd: Iterator[T],
+                  bwd: Iterator[T],
+                  mask: Iterator[T]) -> Tuple[List[T], List[T]]:
+        fwd_list: List[T] = []
+        bwd_list: List[T] = []
+
+        for i, square in enumerate(zip(fwd, bwd)):
+            doc_fwd = torch.sum(
+                square[0] * mask[i][0][:, :, None],
+                dim=0
+            ) * torch.sum(mask[i][0], dim=0)[:, None]  # h1, h2, h3, h4 (N x dim)
+            doc_bwd = torch.sum(
+                square[1] * mask[i][1][:, :, None],
+                dim=0
+            ) * torch.sum(mask[i][1], dim=0)[:, None]  # h3, h2, h1, h0
+            fwd_list.append(doc_fwd)
+            bwd_list.append(doc_bwd)
+        return (fwd_list, bwd_list)
+
+
+
+    def get_sm(self, rep: T) -> T:
+        pad_rep = torch.cat(
+            [torch.zeros(rep.size(0) - 1, rep.size(1)).to(rep.device), rep[:-1, :]],
+            dim=0
+        )
         square = torch.stack(
             [rep[i: i+rep.size(0)].flip((0,)) for i in range(0, rep.size(0))],
             dim = 0
         )
-        return square
+        return square #
 
-    def mask_gate(self, gate: T) -> T:
-        assert gate.size(0) < gate.size(1)
-        return torch.triu(
-            torch.cat((torch.ones(1, gate.size(1)), gate), dim=0),
-            diagonal=0
-        )
+    def mask_gate(self, 
+                  gate_tuple: Tuple[T, T]) -> Tuple[T, T]:
+        """
+        :param gate_tuple:
+        :return: (N x N)
+        """
+        assert gate_tuple[0].size(0) < gate_tuple[0].size(1)
+        assert gate_tuple[1].size(0) < gate_tuple[1].size(1)
+        return (torch.triu(torch.cat((torch.ones(1, gate_tuple[0].size(1)), 
+                                      gate_tuple[0]), 
+                                      dim=0),  
+                           diagonal=0), 
+                torch.triu(torch.cat((torch.ones(1, gate_tuple[1].size(1)), 
+                                      gate_tuple[1]), 
+                                      dim=0), 
+                           diagonal=0)
+               )
+    def init_para(self):
+        if self.score_type == 'bilinear':
+            nn.init.xavier_normal_(
+                self.func.weight
+            )
+            nn.init.zeros_(
+                self.func.bias
+            )
 
 
 def test():
