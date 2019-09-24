@@ -7,12 +7,12 @@ from typing import List, Callable, Tuple, Dict
 import warnings
 
 import torch
-
+from torch import Tensor as T
 from allennlp.common.checks import ConfigurationError
 
 
-StateType = Dict[str, torch.Tensor]  # pylint: disable=invalid-name
-StepFunctionType = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]  # pylint: disable=invalid-name
+StateType = Dict[str, T]  # pylint: disable=invalid-name
+StepFunctionType = Callable[[T, StateType], Tuple[T, StateType]]  # pylint: disable=invalid-name
 
 
 class BeamSearch:
@@ -47,9 +47,9 @@ class BeamSearch:
         self.per_node_beam_size = per_node_beam_size or beam_size
 
     def search(self,
-               start_predictions: torch.Tensor,
+               start_predictions: T,
                start_state: StateType,
-               step: StepFunctionType) -> Tuple[torch.Tensor, torch.Tensor]:
+               step: StepFunctionType) -> Tuple[T, T]:
         """
         Given a starting state and a step function, apply beam search to find the
         most likely target sequences.
@@ -99,12 +99,12 @@ class BeamSearch:
 
         # List of (batch_size, beam_size) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
-        predictions: List[torch.Tensor] = []
+        predictions: List[T] = []
 
         # List of (batch_size, beam_size) tensors. One for each time step. None for
         # the first.  Stores the index n for the parent prediction, i.e.
         # predictions[t-1][i][n], that it came from.
-        backpointers: List[torch.Tensor] = []
+        backpointers: List[T] = []
 
         # Calculate the first timestep. This is done outside the main loop
         # because we are going from a single decoder input (the output from the
