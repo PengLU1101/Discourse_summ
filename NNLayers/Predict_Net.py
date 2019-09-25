@@ -30,22 +30,22 @@ class Predic_Net(nn.Module):
 
     def forward(self,
                 rep_sents: List[T],
-                gate: List[Tuple[T]],
-                idx: List[List[int]],
-                pos: List[List[int]],
-                neg: List[Tuple[List[int], List[T]]]) -> List[T]:
-        fwd: Iterator[T] = map(
+                gate: List[Tuple[T, T]],
+                #idx: List[List[int]],
+                #pos: List[List[int]],
+                neg: List[Tuple[List[int], List[int]]]) -> T:
+        fwd: List[T] = list(map(
             self.get_sm, 
             rep_sents
-            ) #item h1 h2 h3 h4
-        bwd: Iterator[T] = map(
+            )) #item h1 h2 h3 h4
+        bwd: List[T] = list(map(
             self.get_sm, 
             [x.flip((0, )) for x in rep_sents]
-            ) #item h3 h2 h1 h0
-        mask: Iterator[T] = map(
+            )) #item h3 h2 h1 h0
+        mask: List[Tuple[T, T]] = list(map(
             self.mask_gate,
             gate
-            )
+            ))
         doc_fwd, doc_bwd = self.compute_h(fwd, bwd, mask)
 
         fwd_h = torch.cat(doc_fwd, dim=0)
@@ -55,7 +55,7 @@ class Predic_Net(nn.Module):
         )
         fwd_neg = torch.cat([torch.index_select(rep_sents[i],
                                   dim=0,
-                                  index=torch.LongTensor(neg[i][0])) for i in range(len(neg))],
+                                  index=torch.LongTensor(neg[i][0]).to(rep_sents[i].device)) for i in range(len(neg))],
                             dim=0
         )
         bwd_h = torch.cat(doc_bwd, dim=0)
@@ -65,28 +65,29 @@ class Predic_Net(nn.Module):
         )
         bwd_neg = torch.cat([torch.index_select(rep_sents[i],
                                                 dim=0,
-                                                index=torch.LongTensor(neg[i][1])) for i in range(len(neg))],
+                                                index=torch.LongTensor(neg[i][1]).to(rep_sents[i].device)) for i in range(len(neg))],
                             dim=0
                             ) ##### ORDER MATTERS!!!!!!!!!!!!!!!!!!!!!11
-        fp_logit = self.cpt_logit(fwd_h, fwd_pos)
-        fn_logit = self.cpt_logit(fwd_h, fwd_neg)
-        bp_logit = self.cpt_logit(bwd_h, bwd_pos)
-        bn_logit = self.cpt_logit(bwd_h, bwd_neg)
-        return [fp_logit, fn_logit, bp_logit, bn_logit]
+        fp_lld = self.cpt_logit(fwd_h, fwd_pos)
+        fn_lld = self.cpt_logit(fwd_h, fwd_neg)
+        bp_lld = self.cpt_logit(bwd_h, bwd_pos)
+        bn_lld = self.cpt_logit(bwd_h, bwd_neg)
+        loss = torch.sum(fp_lld + bp_lld - fn_lld - bn_lld)
+        return loss
 
     def cpt_logit(self, h: T, t: T) -> T:
         if self.score_type == 'bilinear':
-            logit = self.func(h[:, :, None], t[:, :, None])  # BxNx1
+            lld = F.logsigmoid(self.func(h[:, None, :], t[:, None, :]))  # BxNx1
         else:
-            logit = self.func(h[:, None, :], t[:, :, None])
-        return logit.squeeze(-1).squeeze(-1)
+            lld = F.logsigmoid(self.func(h[:, None, :], t[:, :, None]))
+        return lld.squeeze(-1).squeeze(-1)
 
 
 
     def compute_h(self,
-                  fwd: Iterator[T],
-                  bwd: Iterator[T],
-                  mask: Iterator[T]) -> Tuple[List[T], List[T]]:
+                  fwd: List[T],
+                  bwd: List[T],
+                  mask: List[Tuple[T,T]]) -> Tuple[List[T], List[T]]:
         fwd_list: List[T] = []
         bwd_list: List[T] = []
 
@@ -107,11 +108,11 @@ class Predic_Net(nn.Module):
 
     def get_sm(self, rep: T) -> T:
         pad_rep = torch.cat(
-            [torch.zeros(rep.size(0) - 1, rep.size(1)).to(rep.device), rep[:-1, :]],
+            [torch.zeros(rep.size(0) - 2, rep.size(1)).to(rep.device), rep[:-1, :]],
             dim=0
         )
         square = torch.stack(
-            [rep[i: i+rep.size(0)].flip((0,)) for i in range(0, rep.size(0))],
+            [pad_rep[i: i+rep.size(0)-1, :].flip((0,)) for i in range(0, rep.size(0)-1)],
             dim = 0
         )
         return square #
@@ -124,11 +125,11 @@ class Predic_Net(nn.Module):
         """
         assert gate_tuple[0].size(0) < gate_tuple[0].size(1)
         assert gate_tuple[1].size(0) < gate_tuple[1].size(1)
-        return (torch.triu(torch.cat((torch.ones(1, gate_tuple[0].size(1)), 
+        return (torch.triu(torch.cat((torch.ones(1, gate_tuple[0].size(1)).to(gate_tuple[0].device),
                                       gate_tuple[0]), 
                                       dim=0),  
                            diagonal=0), 
-                torch.triu(torch.cat((torch.ones(1, gate_tuple[1].size(1)), 
+                torch.triu(torch.cat((torch.ones(1, gate_tuple[1].size(1)).to(gate_tuple[1].device),
                                       gate_tuple[1]), 
                                       dim=0), 
                            diagonal=0)

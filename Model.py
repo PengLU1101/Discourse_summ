@@ -26,6 +26,26 @@ class PEmodel(nn.module):
     def forward(self):
         pass
 
+    @staticmethod
+    def train_step(model,
+                   optimizer,
+                   train_iterator,
+                   args):
+        model.train()
+        optimizer.zero_grad()
+
+        # ________ = next(train_iterator)
+        pass
+
+    @staticmethod
+    def test_step(model,
+                  test_iterator,
+                  args):
+        model.eval()
+        pass
+
+
+
 
 def build_model(para):
     assert isinstance(para, namedtuple)
