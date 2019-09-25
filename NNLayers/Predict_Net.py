@@ -31,8 +31,6 @@ class Predic_Net(nn.Module):
     def forward(self,
                 rep_sents: List[T],
                 gate: List[Tuple[T, T]],
-                #idx: List[List[int]],
-                #pos: List[List[int]],
                 neg: List[Tuple[List[int], List[int]]]) -> T:
         fwd: List[T] = list(map(
             self.get_sm, 
