@@ -121,8 +121,11 @@ class Predic_Net(nn.Module):
         :param gate_tuple:
         :return: (N x N)
         """
-        assert gate_tuple[0].size(0) < gate_tuple[0].size(1)
-        assert gate_tuple[1].size(0) < gate_tuple[1].size(1)
+        assert gate_tuple[0].size(0) + 1 == gate_tuple[0].size(1), \
+            f"The expected dim of gate is (n-1, n)"
+        assert gate_tuple[1].size(0) + 1 == gate_tuple[1].size(1), \
+            f"The expected dim of gate is (n-1, n)"
+
         return (torch.triu(torch.cat((torch.ones(1, gate_tuple[0].size(1)).to(gate_tuple[0].device),
                                       gate_tuple[0]), 
                                       dim=0),  
