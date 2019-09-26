@@ -47,38 +47,51 @@ class Dataset(data.Dataset):
     def conver2id(unk, word2id, words_list):
         word2id = defaultdict(lambda: unk, word2id)
         return [[word2id[w] for w in words] for words in words_list]
+    @staticmethod
+    def collate_fn(data: List[Dict[str, Tuple[List[Union[str, int]], List[Union[str, int]]]]]) \
+            -> Tuple[Dict[str, T], Dict[str, L]]:
+        src_doc_list, tgt_doc_list = [], []
+        for _ in data:
+            src_doc_list += [len(_['idx'][0])]
+            tgt_doc_list += [len(_['idx'][1])]
+        chain_src = list(chain.from_iterable([_['idx'][0] for _ in data]))
+        chain_tgt = list(chain.from_iterable([_['idx'][1] for _ in data]))
+        max_src_lens = max(chain.from_iterable(chain_src))
+        max_tgt_lens = max(chain.from_iterable(chain_tgt))
+        padded_src_lens = [len(_) for _ in chain_src]
+        padded_tgt_lens = [len(_) for _ in chain_tgt]
 
-def collate_fn(data: List[Dict[str, Tuple[List[Union[str, int]], List[Union[str, int]]]]]) \
-        -> Tuple[Dict[str, T], Dict[str, L]]:
-    src_doc_list, tgt_doc_list = [], []
-    for _ in data:
-        src_doc_list += [len(_['idx'][0])]
-        tgt_doc_list += [len(_['idx'][1])]
-    chain_src = list(chain.from_iterable([_['idx'][0] for _ in data]))
-    chain_tgt = list(chain.from_iterable([_['idx'][1] for _ in data]))
-    max_src_lens = max(chain.from_iterable(chain_src))
-    max_tgt_lens = max(chain.from_iterable(chain_tgt))
-    padded_src_lens = [len(_) for _ in chain_src]
-    padded_tgt_lens = [len(_) for _ in chain_tgt]
+        padded_src = torch.zeros(len(chain_src, max_src_lens)).long()
+        padded_tgt = torch.zeros(len(chain_tgt, max_tgt_lens)).long()
+        mask_src = torch.zeros(len(chain_src, max_src_lens)).long()
+        mask_tgt = torch.zeros(len(chain_tgt, max_tgt_lens)).long()
 
-    padded_src = torch.zeros(len(chain_src, max_src_lens)).long()
-    padded_tgt = torch.zeros(len(chain_tgt, max_tgt_lens)).long()
-    mask_src = torch.zeros(len(chain_src, max_src_lens)).long()
-    mask_tgt = torch.zeros(len(chain_tgt, max_tgt_lens)).long()
+        for i, sent in enumerate(chain_src):
+            end = padded_src_lens[i]
+            padded_src[i, :end] = torch.LongTensor(sent[:end])
+        for i, sent in enumerate(chain_tgt):
+            end = padded_tgt_lens[i]
+            padded_tgt[i, :end] = torch.LongTensor(sent[:end])
+        T_dict = {'src': padded_src,
+                  'tgt': padded_tgt,
+                  'mask_src': mask_src,
+                  'mask_tgt': mask_tgt
+                  }
 
-    for i, sent in enumerate(chain_src):
-        end = padded_src_lens[i]
-        padded_src[i, :end] = torch.LongTensor(sent[:end])
-    for i, sent in enumerate(chain_tgt):
-        end = padded_tgt_lens[i]
-        padded_tgt[i, :end] = torch.LongTensor(sent[:end])
-    T_dict = {'src': padded_src,
-              'tgt': padded_tgt,
-              'mask_src': mask_src,
-              'mask_tgt': mask_tgt
-              }
+        return T_dict, data['token']
 
-    return T_dict, data['token'])
+def get_loader(name,
+               split,
+               word2id,
+               data):
+    dataset = Dataset(name, split, word2id, data)
+    if split == 'train':
+        shuffle = True
+    return torch.utils.data.DataLoader(dataset=dataset,
+                                       batch_size=batch_size,
+                                       shuffle=shuffle,
+                                       collate_fn=dataset.collate_fn)
+
 
 
 
