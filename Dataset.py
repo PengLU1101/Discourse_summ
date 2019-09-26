@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # author：Peng time:2019-08-25
-from typing import List, Tuple, Dict, Iterator, Callable
+from typing import List, Tuple, Dict, Union, Callable
 
-import nltk
+from torch import Tensor as T
 import torch
 import torch.utils.data as data
-import itertools
+import itertools import chain
 
 
 def test():
