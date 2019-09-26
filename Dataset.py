@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict, Union, Callable
 from torch import Tensor as T
 import torch
 import torch.utils.data as data
-import itertools import chain
+from itertools import chain
 
 
 def test():
