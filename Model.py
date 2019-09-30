@@ -118,12 +118,23 @@ class PEmodel(nn.Module):
         return log
 
 def build_model(para):
-    assert isinstance(para, namedtuple)
-    embedding_layer = Embeddings(word_vec_size=para.emb_dim,
-                                 word_vocab_size=para.voc_size,
-                                 )
+    emb_layer = Embeddings(word_vec_size=para.emb_dim,
+                           word_vocab_size=para.voc_size,
+                          )
+    enc_layer = nn.transformer(None)
+    score_layer = Score_Net(para.d,
+                            para.dropout,
+                            para.score_type)
+    gate_layer = Gate_Net(para.d,
+                          para.dropout,
+                          para.resolution,
+                          para.hard)
+    predictor = Predic_Net(para.d,
+                           para.score_type)
 
-    return PEmodel(embedding_layer, encoder, parser, predictor)
+    encoder = Encoder(emb_layer, enc_layer)
+    parser = Parser(score_layer, gate_layer)
+    return PEmodel(encoder, parser, predictor)
 
 
 def test():
