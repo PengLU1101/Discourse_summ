@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # author：Peng time:2019-08-21
-from typing import List, Tuple, Dict, Union, Callable
+from typing import List, Tuple, Callable
 
 import torch
 import torch.nn as nn
@@ -55,16 +55,18 @@ class Score_Net(nn.Module):
         return score.squeeze(-1).squeeze(-1) # (B x seq)
 
     def parsing(self,
-                rep_srcs: List[T], rep_tgts: T) -> T:
+                rep_srcs: List[T],
+                rep_tgts: List[T]):
         """
         :param rep_srcs:
         :param rep_tgts:
         :return:
         """
         assert len(rep_srcs) == len(rep_tgts)
+        pass
 
 
-    def parsing_score(self, src: T, tgt: T) -> T:
+    def parsing_score(self, src: T, tgt: T):
         assert src.size(1) == tgt.size(1)
         pass
 

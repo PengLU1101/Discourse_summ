@@ -31,7 +31,7 @@ class Predic_Net(nn.Module):
     def forward(self,
                 rep_sents: List[T],
                 gate: List[Tuple[T, T]],
-                neg: List[Tuple[List[int], List[int]]]) -> T:
+                neg: List[Tuple[List[int], List[int]]]) -> Tuple[T, T]:
         fwd: List[T] = list(map(
             self.get_sm, 
             rep_sents
@@ -70,15 +70,16 @@ class Predic_Net(nn.Module):
         fn_lld = self.cpt_logit(fwd_h, fwd_neg)
         bp_lld = self.cpt_logit(bwd_h, bwd_pos)
         bn_lld = self.cpt_logit(bwd_h, bwd_neg)
-        loss = torch.sum(fp_lld + bp_lld - fn_lld - bn_lld)
-        return loss
+        pos_loss = torch.mean((fp_lld + bp_lld) / 2)
+        neg_loss = torch.mean((fn_lld + bn_lld) / 2)
+        return (pos_loss, neg_loss)
 
     def cpt_logit(self, h: T, t: T) -> T:
         if self.score_type == 'bilinear':
             lld = F.logsigmoid(self.func(h[:, None, :], t[:, None, :]))  # BxNx1
         else:
             lld = F.logsigmoid(self.func(h[:, None, :], t[:, :, None]))
-        return lld.squeeze(-1).squeeze(-1)
+        return lld.squeeze(-1)
 
 
 

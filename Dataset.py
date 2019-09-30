@@ -2,17 +2,16 @@
 # -*- coding: utf-8 -*-
 # author：Peng time:2019-08-25
 import os
-from typing import List, Tuple, Dict, Union, Callable, Iterator
+from typing import List, Dict
 from itertools import chain
 from collections import defaultdict, OrderedDict
 import json
 import re
 import pickle
 
-from torch import Tensor as T
+#from torch import Tensor as T
 import torch
 import torch.utils.data as data
-from nltk.tokenize import sent_tokenize, word_tokenize
 
 
 
@@ -51,10 +50,6 @@ class CnnDmDataset(data.Dataset):
             js = json.loads(f.read())
         src_list = list(map(self.convert2list, js['article']))
         tgt_list = list(map(self.convert2list, js['abstract']))
-        #print(src_list)
-        #src_idx = list(map(self.convert2ids, self.word2id, src_list))
-        #tgt_idx = list(map(self.convert2ids, self.word2id, tgt_list))
-        #print(src_idx)
         js['src_idx'] = src_list
         js['tgt_idx'] = tgt_list
         return js
@@ -63,9 +58,27 @@ class CnnDmDataset(data.Dataset):
         return [self.word2id[w] for w in ['<start>'] + s.lower().split() + ['<end>']]
 
     @staticmethod
-    def convert2ids(word2id: Dict[str, int],
-                    str_list: List[str]):
-        return list(map(lambda x: word2id[x], str_list))
+    def get_idx_by_lens(lens_list: List[int]) -> List[List[int]]:
+        idx_list: List[List[int]] = []
+        start = 0
+        for i in range(len(lens_list)):
+            idx_list += [list(range(start, start + lens_list[i]))]
+            start = idx_list[-1][-1] + 1
+        return idx_list
+    @staticmethod
+    def get_neglist(lens_list):
+        neg = []
+        for x in lens_list:
+            neg.append((smpneg(list(range(x))), smpneg(list(range(x))[::-1])))
+        return neg
+
+    @staticmethod
+    def smpneg(l):
+        _ = []
+        ll = l + l
+        for i in range(1, len(l)):
+            _ += [random.choice(ll[i + 1: i + 6])]
+        return _
 
     @staticmethod
     def _count_data(path):
@@ -110,17 +123,15 @@ class CnnDmDataset(data.Dataset):
         token_dict = {'article': [_['article'] for _ in data],
                       'abstract': [_['abstract'] for _ in data]
                       }
-        return Tensor_dict, token_dict
-
-
-def coll_fn(data):
-    source_lists, target_lists = unzip(data)
-    # NOTE: independent filtering works because
-    #       source and targets are matched properly by the Dataset
-    sources = list(filter(bool, concat(source_lists)))
-    targets = list(filter(bool, concat(target_lists)))
-    assert all(sources) and all(targets)
-    return sources, targets
+        src_idxbylen = self.get_idx_by_lens(src_doc_list)
+        score_idxbylen = self.get_idx_by_lens([x + 1 for x in src_doc_list])
+        tgt_idxbylen = self.get_idx_by_lens(tgt_doc_list)
+        neg_idx = self.get_neglist(src_doc_list)
+        idx_dict = {'rep_idx': src_idxbylen,
+                    'score_idx': score_idxbylen,
+                    'tgt_idx': tgt_idxbylen,
+                    'neg_idx': neg_idx}
+        return Tensor_dict, token_dict, idx_dict
 
 
 def get_loader(path,
@@ -153,13 +164,13 @@ def test():
     finished_file_dir = os.path.join(PKL_DIR, 'finished_files')
     wb = read_pkl(os.path.join(finished_file_dir, 'vocab_cnt.pkl'))
     word2id = make_vocab(wb, 30000)
-
     test_loader = get_loader(finished_file_dir, 'test', 10, word2id)
-    #testdata = [iter(_) for _ in test_loader]
-    a = next(iter(test_loader))
-    print(a)
-    b =  next(iter(test_loader))
-    print(b)
-    assert a == b
+    data_iter = iter(test_loader)
+    i = 0
+    for x in data_iter:
+        print(x)
+        i += 1
+        if i == 3:
+            break
 if __name__ == "__main__":
     test()
