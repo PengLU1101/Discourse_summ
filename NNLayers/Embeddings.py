@@ -1,13 +1,12 @@
 """ Embeddings module """
 import math
-import warnings
 from typing import Optional
 
 import torch
 import torch.nn as nn
 from torch import Tensor as T
+import numpy as np
 
-from utils.misc import Elementwise
 
 
 class PositionalEncoding(nn.Module):
@@ -60,198 +59,41 @@ class PositionalEncoding(nn.Module):
         return self.dropout(emb)
 
 
-class Embeddings(nn.Module):
-    """Words embeddings for encoder/decoder.
+class WordEmbedding(nn.Module):
+    def __init__(self,
+                 vocab: int,
+                 d_emb: int):
+        super(WordEmbedding, self).__init__()
+        self.lut = nn.Embedding(vocab, d_emb)
+        self.d_emb = d_emb
+        scope = np.sqrt(1.0 / d_emb)
+        self.lut.weight.data.uniform_(-scope, scope)
+        self.lut.weight.data[0] = torch.zeros(1, d_emb)
 
-    Additionally includes ability to add sparse input features
-    based on "Linguistic Input Features Improve Neural Machine Translation"
-    :cite:`sennrich2016linguistic`.
-
-
-    .. mermaid::
-
-       graph LR
-          A[Input]
-          C[Feature 1 Lookup]
-          A-->B[Word Lookup]
-          A-->C
-          A-->D[Feature N Lookup]
-          B-->E[MLP/Concat]
-          C-->E
-          D-->E
-          E-->F[Output]
-
-    Args:
-        word_vec_size (int): size of the dictionary of embeddings.
-        word_padding_idx (int): padding index for words in the embeddings.
-        feat_padding_idx (List[int]): padding index for a list of features
-                                   in the embeddings.
-        word_vocab_size (int): size of dictionary of embeddings for words.
-        feat_vocab_sizes (List[int], optional): list of size of dictionary
-            of embeddings for each feature.
-        position_encoding (bool): see :class:`~onmt.modules.PositionalEncoding`
-        feat_merge (string): merge action for the features embeddings:
-            concat, sum or mlp.
-        feat_vec_exponent (float): when using `-feat_merge concat`, feature
-            embedding size is N^feat_dim_exponent, where N is the
-            number of values the feature takes.
-        feat_vec_size (int): embedding dimension for features when using
-            `-feat_merge mlp`
-        dropout (float): dropout probability.
-    """
-
-    def __init__(self, word_vec_size,
-                 word_vocab_size,
-                 word_padding_idx,
-                 position_encoding=False,
-                 feat_merge="concat",
-                 feat_vec_exponent=0.7,
-                 feat_vec_size=-1,
-                 feat_padding_idx=[],
-                 feat_vocab_sizes=[],
-                 dropout=0,
-                 sparse=False,
-                 fix_word_vecs=False):
-        self._validate_args(feat_merge, feat_vocab_sizes, feat_vec_exponent,
-                            feat_vec_size, feat_padding_idx)
-
-        if feat_padding_idx is None:
-            feat_padding_idx = []
-        self.word_padding_idx = word_padding_idx
-
-        self.word_vec_size = word_vec_size
-
-        # Dimensions and padding for constructing the word embedding matrix
-        vocab_sizes = [word_vocab_size]
-        emb_dims = [word_vec_size]
-        pad_indices = [word_padding_idx]
-
-        # Dimensions and padding for feature embedding matrices
-        # (these have no effect if feat_vocab_sizes is empty)
-        if feat_merge == 'sum':
-            feat_dims = [word_vec_size] * len(feat_vocab_sizes)
-        elif feat_vec_size > 0:
-            feat_dims = [feat_vec_size] * len(feat_vocab_sizes)
-        else:
-            feat_dims = [int(vocab ** feat_vec_exponent)
-                         for vocab in feat_vocab_sizes]
-        vocab_sizes.extend(feat_vocab_sizes)
-        emb_dims.extend(feat_dims)
-        pad_indices.extend(feat_padding_idx)
-
-        # The embedding matrix look-up tables. The first look-up table
-        # is for words. Subsequent ones are for features, if any exist.
-        emb_params = zip(vocab_sizes, emb_dims, pad_indices)
-        embeddings = [nn.Embedding(vocab, dim, padding_idx=pad, sparse=sparse)
-                      for vocab, dim, pad in emb_params]
-        emb_luts = Elementwise(feat_merge, embeddings)
-
-        # The final output size of word + feature vectors. This can vary
-        # from the word vector size if and only if features are defined.
-        # This is the attribute you should access if you need to know
-        # how big your embeddings are going to be.
-        self.embedding_size = (sum(emb_dims) if feat_merge == 'concat'
-                               else word_vec_size)
-
-        # The sequence of operations that converts the input sequence
-        # into a sequence of embeddings. At minimum this consists of
-        # looking up the embeddings for each word and feature in the
-        # input. Model parameters may require the sequence to contain
-        # additional operations as well.
-        super(Embeddings, self).__init__()
-        self.make_embedding = nn.Sequential()
-        self.make_embedding.add_module('emb_luts', emb_luts)
-
-        if feat_merge == 'mlp' and len(feat_vocab_sizes) > 0:
-            in_dim = sum(emb_dims)
-            mlp = nn.Sequential(nn.Linear(in_dim, word_vec_size), nn.ReLU())
-            self.make_embedding.add_module('mlp', mlp)
-
-        self.position_encoding = position_encoding
-
-        if self.position_encoding:
-            pe = PositionalEncoding(dropout, self.embedding_size)
-            self.make_embedding.add_module('pe', pe)
-
-        if fix_word_vecs:
-            self.word_lut.weight.requires_grad = False
-
-    def _validate_args(self, feat_merge, feat_vocab_sizes, feat_vec_exponent,
-                       feat_vec_size, feat_padding_idx):
-        if feat_merge == "sum":
-            # features must use word_vec_size
-            if feat_vec_exponent != 0.7:
-                warnings.warn("Merging with sum, but got non-default "
-                              "feat_vec_exponent. It will be unused.")
-            if feat_vec_size != -1:
-                warnings.warn("Merging with sum, but got non-default "
-                              "feat_vec_size. It will be unused.")
-        elif feat_vec_size > 0:
-            # features will use feat_vec_size
-            if feat_vec_exponent != -1:
-                warnings.warn("Not merging with sum and positive "
-                              "feat_vec_size, but got non-default "
-                              "feat_vec_exponent. It will be unused.")
-        else:
-            if feat_vec_exponent <= 0:
-                raise ValueError("Using feat_vec_exponent to determine "
-                                 "feature vec size, but got feat_vec_exponent "
-                                 "less than or equal to 0.")
-        n_feats = len(feat_vocab_sizes)
-        if n_feats != len(feat_padding_idx):
-            raise ValueError("Got unequal number of feat_vocab_sizes and "
-                             "feat_padding_idx ({:d} != {:d})".format(
-                                n_feats, len(feat_padding_idx)))
-
-    @property
-    def word_lut(self):
-        """Word look-up table."""
-        return self.make_embedding[0][0]
-
-    @property
-    def emb_luts(self):
-        """Embedding look-up table."""
-        return self.make_embedding[0]
-
-    def load_pretrained_vectors(self, emb_file):
-        """Load in pretrained embeddings.
-
-        Args:
-          emb_file (str) : path to torch serialized embeddings
+    def forward(self, x: T) -> T:
         """
-
-        if emb_file:
-            pretrained = torch.load(emb_file)
-            pretrained_vec_size = pretrained.size(1)
-            if self.word_vec_size > pretrained_vec_size:
-                self.word_lut.weight.data[:, :pretrained_vec_size] = pretrained
-            elif self.word_vec_size < pretrained_vec_size:
-                self.word_lut.weight.data \
-                    .copy_(pretrained[:, :self.word_vec_size])
-            else:
-                self.word_lut.weight.data.copy_(pretrained)
-
-    def forward(self, source, step=None):
-        """Computes the embeddings for words and features.
-
-        Args:
-            source (LongTensor): index tensor ``(len, batch, nfeat)``
-
-        Returns:
-            FloatTensor: Word embeddings ``(len, batch, embedding_size)``
+        Arguments:
+            x: [batch_size, seq_len] LongTensor
+        Output:
+            embeds: [batch, seq_len, d_emb] FloatTensor
         """
+        embeds = self.lut(x)
 
-        if self.position_encoding:
-            for i, module in enumerate(self.make_embedding._modules.values()):
-                if i == len(self.make_embedding._modules.values()) - 1:
-                    source = module(source, step=step)
-                else:
-                    source = module(source)
+        return embeds
+    def apply_weights(self, weights, fine_tune_flag=True):
+        if isinstance(weights, np.ndarray):
+            self.lut.weight.data.copy_(torch.from_numpy(weights))
         else:
-            source = self.make_embedding(source)
+            pass
+        if not fine_tune_flag:
+            for p in self.lut.parameters():
+                p.requires_grad = False
 
-        return source
+class Embedding_Net(nn.Module):
+    def __init__(self, word_emb, position_emb):
+        super(Embedding_Net, self).__init__()
+        self.wordemb = word_emb
+        self.positionemb = position_emb
 
-    def update_dropout(self, dropout):
-        if self.position_encoding:
-            self._modules['make_embedding'][1].dropout.p = dropout
+    def forward(self, input: T) -> T:
+        return self.positionemb(self.wordemb(input))
