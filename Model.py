@@ -11,7 +11,7 @@ from torch import Tensor as T
 import numpy as np
 
 INF = 1e-9
-from NNLayers.Embeddings import Embeddings
+from NNLayers.Embeddings import Embedding_Net, WordEmbedding, PositionalEncoding
 from NNLayers.Gate_Net import Gate_Net, Score_Net
 from NNLayers.Predict_Net import Predic_Net
 
@@ -27,7 +27,10 @@ class Encoder(nn.Module):
                 src: T,
                 mask: T,
                 idx_list: List[List[int]]) -> List[T]:
-        rep = self.Enc_Layer(self.Emb_Layer(src).masked_fill_(mask[:, :, None].eq(0), INF))
+        rep = self.Emb_Layer(src).permute(1, 0)
+        rep = self.Enc_Layer(
+            src=rep,
+            src_key_padding_mask=mask.eq(0)).permute(1, 0)[:, 0, :]
         return [torch.index_select(rep,
                                   dim=0,
                                   index=torch.LongTensor(idx).to(src.device)) for idx in idx_list]
@@ -118,11 +121,20 @@ class PEmodel(nn.Module):
         return log
 
 def build_model(para):
-    emb_layer = Embeddings(
-        word_vec_size=para.emb_dim,
-        word_vocab_size=para.voc_size,
+
+    word_emb = WordEmbedding(para.voc_size, para.emb)
+    position_emb = PositionalEncoding(para.dropout, para.emb_dim)
+    emb_layer = Embedding_Net(
+        word_emb,
+        position_emb,
     )
-    enc_layer = nn.transformer(None)
+    enc_layer = nn.TransformerEncoder(
+        nn.TransformerEncoderLayer(para.emb_dim, para.nhead, para.dropout),
+        num_layers=para.n_layer,
+        norm=nn.LayerNorm(para.d_model)
+    )
+    encoder = Encoder(emb_layer, enc_layer)
+
     score_layer = Score_Net(
         para.d,
         para.dropout,
@@ -134,13 +146,13 @@ def build_model(para):
         para.resolution,
         para.hard
     )
+    parser = Parser(score_layer, gate_layer)
+
     predictor = Predic_Net(
         para.d,
         para.score_type
     )
 
-    encoder = Encoder(emb_layer, enc_layer)
-    parser = Parser(score_layer, gate_layer)
     return PEmodel(encoder, parser, predictor)
 
 
