@@ -1,9 +1,11 @@
 """ Embeddings module """
 import math
 import warnings
+from typing import Optional
 
 import torch
 import torch.nn as nn
+from torch import Tensor as T
 
 from utils.misc import Elementwise
 
@@ -19,39 +21,43 @@ class PositionalEncoding(nn.Module):
        dim (int): embedding size
     """
 
-    def __init__(self, dropout, dim, max_len=5000):
+    def __init__(self,
+                 dropout: float,
+                 dim: int,
+                 max_len: int=5000) -> None:
         if dim % 2 != 0:
-            raise ValueError("Cannot use sin/cos positional encoding with "
-                             "odd dim (got dim={:d})".format(dim))
-        pe = torch.zeros(max_len, dim)
-        position = torch.arange(0, max_len).unsqueeze(1)
+            raise ValueError(f"Cannot use sin/cos positional encoding with "
+                             "odd dim (got dim={dim :d})")
+        pe = torch.zeros(max_len, dim) # max_len x dim
+        position = torch.arange(0, max_len).unsqueeze(1) # max_len x 1
         div_term = torch.exp((torch.arange(0, dim, 2, dtype=torch.float) *
                              -(math.log(10000.0) / dim)))
         pe[:, 0::2] = torch.sin(position.float() * div_term)
         pe[:, 1::2] = torch.cos(position.float() * div_term)
-        pe = pe.unsqueeze(1)
+        pe = pe.unsqueeze(0) # 1 x max_len x dim
         super(PositionalEncoding, self).__init__()
         self.register_buffer('pe', pe)
         self.dropout = nn.Dropout(p=dropout)
         self.dim = dim
 
-    def forward(self, emb, step=None):
+    def forward(self,
+                emb: T,
+                step: Optional[int]=None) -> T:
         """Embed inputs.
 
         Args:
             emb (FloatTensor): Sequence of word vectors
-                ``(seq_len, batch_size, self.dim)``
+                ``(batch_size, seq_len, self.dim)``
             step (int or NoneType): If stepwise (``seq_len = 1``), use
                 the encoding for this position.
         """
 
         emb = emb * math.sqrt(self.dim)
         if step is None:
-            emb = emb + self.pe[:emb.size(0)]
+            emb = emb + self.pe[:, :emb.size(1), :]
         else:
-            emb = emb + self.pe[step]
-        emb = self.dropout(emb)
-        return emb
+            emb = emb + self.pe[:, step, :]
+        return self.dropout(emb)
 
 
 class Embeddings(nn.Module):

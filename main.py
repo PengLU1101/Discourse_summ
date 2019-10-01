@@ -53,13 +53,12 @@ def main(args):
             f'Parameter {name}: {str(param.size())}, require_grad = {str(param.requires_grad)}'
         )
 
-    if args.cuda:
-        pe_model = pe_model.cuda()
+    if torch.cuda.is_available():
+        pe_model = pe_model.to(args.device )
 
     if args.do_train:
         # Set training dataloader iterator
-        train_dataloader = Dataset.get_loader(args.path, "train", args.b, word2id)
-
+        train_dataloader = Dataset.get_loader(args.path, "train", args.batch_size, word2id)
         train_iterator = iter(train_dataloader)
 
         # Set training configuration
@@ -102,8 +101,9 @@ def main(args):
 
         # Training Loop
         for step in range(init_step, args.max_steps):
-
+            #for i in range(len(train_iterator)):
             log = pe_model.train_step(pe_model, optimizer, train_iterator, args)
+
 
             training_logs.append(log)
 
