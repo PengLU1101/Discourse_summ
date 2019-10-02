@@ -3,6 +3,7 @@
 # author：Peng time:2019-07-16
 from typing import List, Tuple, Dict, Union, Callable
 from collections import namedtuple
+import random
 
 import torch
 import torch.nn as nn
@@ -14,6 +15,7 @@ INF = 1e-9
 from NNLayers.Embeddings import Embedding_Net, WordEmbedding, PositionalEncoding
 from NNLayers.Gate_Net import Gate_Net, Score_Net
 from NNLayers.Predict_Net import Predic_Net
+
 
 class Encoder(nn.Module):
     def __init__(self,
@@ -27,10 +29,10 @@ class Encoder(nn.Module):
                 src: T,
                 mask: T,
                 idx_list: List[List[int]]) -> List[T]:
-        rep = self.Emb_Layer(src).permute(1, 0)
+        rep = self.Emb_Layer(src).permute(1, 0, 2)
         rep = self.Enc_Layer(
             src=rep,
-            src_key_padding_mask=mask.eq(0)).permute(1, 0)[:, 0, :]
+            src_key_padding_mask=mask.eq(0)).permute(1, 0, 2)[:, 0, :]
         return [torch.index_select(rep,
                                   dim=0,
                                   index=torch.LongTensor(idx).to(src.device)) for idx in idx_list]
@@ -73,17 +75,18 @@ class PEmodel(nn.Module):
     @staticmethod
     def train_step(model,
                    optimizer,
-                   train_iterator,
+                   data,
                    args):
         model.train()
         optimizer.zero_grad()
 
-        Tensor_dict, token_dict, idx_dict = next(train_iterator)
-        src = Tensor_dict['src']
-        mask = Tensor_dict['mask_src']
-        rep_idx = idx_dict['rep_idx']
-        score_idx = idx_dict['score_idx']
-        pos_loss, neg_loss = model(src, mask, rep_idx, score_idx)
+        Tensor_dict, token_dict, idx_dict = data
+        pos_loss, neg_loss = model(
+            Tensor_dict['src'],
+            Tensor_dict['mask_src'],
+            idx_dict['rep_idx'],
+            idx_dict['score_idx']
+        )
         loss = (pos_loss - neg_loss) / 2
 
         loss.backward()
@@ -100,15 +103,16 @@ class PEmodel(nn.Module):
 
     @staticmethod
     def test_step(model,
-                  test_iterator,
+                  data,
                   args):
         model.eval()
-        ensor_dict, token_dict, idx_dict = next(test_iterator)
-        src = Tensor_dict['src']
-        mask = Tensor_dict['mask_src']
-        rep_idx = idx_dict['rep_idx']
-        score_idx = idx_dict['score_idx']
-        pos_loss, neg_loss = model(src, mask, rep_idx, score_idx)
+        Tensor_dict, token_dict, idx_dict = data
+        pos_loss, neg_loss = model(
+            Tensor_dict['src'],
+            Tensor_dict['mask_src'],
+            idx_dict['rep_idx'],
+            idx_dict['score_idx']
+        )
         loss = (pos_loss - neg_loss) / 2
 
         log = {
@@ -122,7 +126,7 @@ class PEmodel(nn.Module):
 
 def build_model(para):
 
-    word_emb = WordEmbedding(para.voc_size, para.emb)
+    word_emb = WordEmbedding(para.voc_size, para.emb_dim)
     position_emb = PositionalEncoding(para.dropout, para.emb_dim)
     emb_layer = Embedding_Net(
         word_emb,
@@ -136,12 +140,12 @@ def build_model(para):
     encoder = Encoder(emb_layer, enc_layer)
 
     score_layer = Score_Net(
-        para.d,
+        para.d_model,
         para.dropout,
         para.score_type
     )
     gate_layer = Gate_Net(
-        para.d,
+        para.d_model,
         para.dropout,
         para.resolution,
         para.hard
@@ -149,15 +153,82 @@ def build_model(para):
     parser = Parser(score_layer, gate_layer)
 
     predictor = Predic_Net(
-        para.d,
+        para.d_model,
         para.score_type
     )
 
     return PEmodel(encoder, parser, predictor)
 
+def get_idx_by_lens(lens_list: List[int]) -> List[List[int]]:
+    idx_list: List[List[int]] = []
+    start = 0
+    for i in range(len(lens_list)):
+        idx_list += [list(range(start, start + lens_list[i]))]
+        start = idx_list[-1][-1] + 1
+    return idx_list
+
+def get_neglist(lens_list):
+    neg = []
+    for x in lens_list:
+        neg.append((smpneg(list(range(x))), smpneg(list(range(x))[::-1])))
+    return neg
+
+def smpneg(l):
+    _ = []
+    ll = l + l
+    for i in range(1, len(l)):
+        _ += [random.choice(ll[i + 1: i + 6])]
+    return _
 
 def test():
-    pass
+    word_emb = WordEmbedding(100, 20)
+    position_emb = PositionalEncoding(0.5, 20)
+    emb_layer = Embedding_Net(
+        word_emb,
+        position_emb,
+    )
+    enc_layer = nn.TransformerEncoder(
+        nn.TransformerEncoderLayer(d_model=20, nhead=2, dropout=0.5),
+        num_layers=3,
+        norm=nn.LayerNorm(20)
+    )
+    encoder = Encoder(emb_layer, enc_layer)
+
+    score_layer = Score_Net(
+        20,
+        0.5,
+        'dot'
+    )
+    gate_layer = Gate_Net(
+        20,
+        0.5,
+        1,
+        'dot'
+    )
+    parser = Parser(score_layer, gate_layer)
+
+    predictor = Predic_Net(
+        20,
+        'dot'
+    )
+    model = PEmodel(encoder, parser, predictor)
+
+    data = list(range(100))
+    random.shuffle(data)
+    t = torch.LongTensor(data).view(25, 4)
+    mask = torch.ones(25, 4).long()
+    #mask[0, :] = 0
+    len_list = [4, 5, 10, 6]
+    repidx = get_idx_by_lens(len_list)
+    scoreidx = get_idx_by_lens([x+1 for x in len_list])
+    neg_idx = get_neglist(len_list)
+
+    lp, ln = model(t, mask, repidx, scoreidx, neg_idx)
+    print(lp)
+    print(ln)
+
+
+
 
 
 if __name__ == "__main__":
