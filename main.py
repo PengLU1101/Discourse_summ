@@ -16,7 +16,17 @@ import Model
 import Dataset
 from Parser import *
 
+try:
+    PKL_DIR = os.environ['PKL_DIR']
+except KeyError:
+    print('please use environment variable to specify .pkl file directories')
+
 def main(args):
+    # train/test
+    # data sir/model dir/ checkpoint dir
+    # prepare dataset
+    # build model/optimizer
+    #
     if (not args.do_train) and (not args.do_valid) and (not args.do_test):
         raise ValueError('one of train/val/test mode must be choosed.')
 
