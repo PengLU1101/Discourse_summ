@@ -21,14 +21,17 @@ def parse_args(args=None):
     parser.add_argument('--do_test', action='store_true')
     parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
 
-    #parser.add_argument('--countries', action='store_true', help='Use Countries S1/S2/S3 datasets')
 
     parser.add_argument('--data_path', type=str, default=None)
-    parser.add_argument('--model', default='dot', type=str)
+    parser.add_argument('--save_path', type=str, default=None)
+    parser.add_argument('--score_type', default='dot', type=str)
 
-    parser.add_argument('-n', '--negative_sample_size', default=128, type=int)
-    parser.add_argument('-d', '--hidden_dim', default=500, type=int)
+    parser.add_argument('-ed', '--emb_dim', default=500, type=int)
+    parser.add_argument('-md', '--d_model', default=500, type=int)
     parser.add_argument('-b', '--batch_size', default=1024, type=int)
+    parser.add_argument('-t', '--resolution', default=1.0, type=float)
+    parser.add_argument('-h', '--hard', default='dot', type=str)
+
     parser.add_argument('-r', '--regularization', default=0.0, type=float)
     parser.add_argument('--test_batch_size', default=4, type=int, help='valid/test batch size')
 
@@ -55,12 +58,9 @@ def override_config(args):
     with open(os.path.join(args.init_checkpoint, 'config.json'), 'r') as fjson:
         argparse_dict = json.load(fjson)
 
-    args.countries = argparse_dict['countries']
     if args.data_path is None:
         args.data_path = argparse_dict['data_path']
     args.model = argparse_dict['model']
-    args.double_entity_embedding = argparse_dict['double_entity_embedding']
-    args.double_relation_embedding = argparse_dict['double_relation_embedding']
     args.hidden_dim = argparse_dict['hidden_dim']
     args.test_batch_size = argparse_dict['test_batch_size']
 
@@ -79,18 +79,6 @@ def save_model(model, optimizer, save_variable_list, args):
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict()},
         os.path.join(args.save_path, 'checkpoint')
-    )
-
-    entity_embedding = model.entity_embedding.detach().cpu().numpy()
-    np.save(
-        os.path.join(args.save_path, 'entity_embedding'),
-        entity_embedding
-    )
-
-    relation_embedding = model.relation_embedding.detach().cpu().numpy()
-    np.save(
-        os.path.join(args.save_path, 'relation_embedding'),
-        relation_embedding
     )
 
 
@@ -124,3 +112,9 @@ def log_metrics(mode, step, metrics):
     '''
     for metric in metrics:
         logging.info('%s %s at step %d: %f' % (mode, metric, step, metrics[metric]))
+
+
+def read_pkl(path):
+    with open(path, "rb") as f:
+        data_dict = pickle.load(f)
+    return data_dict

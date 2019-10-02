@@ -16,10 +16,10 @@ import Model
 import Dataset
 from Parser import *
 
-try:
-    PKL_DIR = os.environ['PKL_DIR']
-except KeyError:
-    print('please use environment variable to specify .pkl file directories')
+# try:
+#     DATA_DIR = os.environ['PKL_DIR']
+# except KeyError:
+#     print('please use environment variable to specify .pkl file directories')
 
 def main(args):
     # train/test
@@ -50,9 +50,19 @@ def main(args):
     logging.info(f'Model: {args.model}')
     logging.info(f'Data Path: {args.data_path}')
 
-    logging.info(f'#train: {len(train)}')
-    logging.info(f'#valid: {len(val)}')
-    logging.info(f'#test: {len(test)}')
+    finished_file_dir = os.path.join(args.data_path, 'finished_files')
+    wb = read_pkl(os.path.join(finished_file_dir, 'vocab_cnt.pkl'))
+    word2id = make_vocab(wb, 30000)
+    train_dataset = CnnDmDataset('train', finished_file_dir, word2id)
+    test_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                              batch_size=args.batch_size,
+                                              shuffle=shuffle,
+                                              num_workers=num_workers,
+                                              collate_fn=dataset.collate_fn)
+
+    logging.info(f'#train: {len(train_dataset)}')
+    logging.info(f'#valid: {len(val_dataset)}')
+    logging.info(f'#test: {len(test_dataset)}')
 
     # All true triples
     pe_model = Model.build_model(args)

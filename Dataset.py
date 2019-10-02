@@ -134,23 +134,6 @@ class CnnDmDataset(data.Dataset):
         return Tensor_dict, token_dict, idx_dict
 
 
-def get_loader(path,
-               split,
-               batch_size,
-               word2id,
-               num_workers=10):
-    dataset = CnnDmDataset(split, path, word2id)
-    if split == 'train':
-        shuffle = True
-    else:
-        shuffle = False
-    return torch.utils.data.DataLoader(dataset=dataset,
-                                       batch_size=batch_size,
-                                       shuffle=shuffle,
-                                       num_workers=num_workers,
-                                       collate_fn=dataset.collate_fn)
-
-
 def test():
     #try:
     #    PKL_DIR = os.environ['PKL_DIR']
