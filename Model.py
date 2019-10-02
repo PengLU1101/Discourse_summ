@@ -126,7 +126,7 @@ class PEmodel(nn.Module):
 
 def build_model(para):
 
-    word_emb = WordEmbedding(para.voc_size, para.emb_dim)
+    word_emb = WordEmbedding(para.word2id, para.emb_dim)
     position_emb = PositionalEncoding(para.dropout, para.emb_dim)
     emb_layer = Embedding_Net(
         word_emb,
@@ -226,10 +226,6 @@ def test():
     lp, ln = model(t, mask, repidx, scoreidx, neg_idx)
     print(lp)
     print(ln)
-
-
-
-
 
 if __name__ == "__main__":
     test()

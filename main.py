@@ -13,7 +13,7 @@ import torch
 import numpy as np
 
 import Model
-import Dataset
+from Dataset import CnnDmDataset
 from Parser import *
 
 # try:
@@ -46,25 +46,25 @@ def main(args):
         logging.info('Gpu is avialable! and set args.device = cuda.')
 
     # Write logs to checkpoint and console
-
+    # Logs details of datasets.
     logging.info(f'Model: {args.model}')
     logging.info(f'Data Path: {args.data_path}')
 
     finished_file_dir = os.path.join(args.data_path, 'finished_files')
     wb = read_pkl(os.path.join(finished_file_dir, 'vocab_cnt.pkl'))
-    word2id = make_vocab(wb, 30000)
-    train_dataset = CnnDmDataset('train', finished_file_dir, word2id)
-    test_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                              batch_size=args.batch_size,
-                                              shuffle=shuffle,
-                                              num_workers=num_workers,
-                                              collate_fn=dataset.collate_fn)
+    word2id = make_vocab(wb, args.vocab_size)
+    args.word2id = len(word2id)
+    name2data = {'cnndm': CnnDmDataset, 'book': BookDataset}
+    if args.dataset not in name2data:
+        raise ValueError('You should use dataset <cnndm> or <book>')
+
+    train_dataset = name2data[args.dataset]('train', finished_file_dir, word2id)
 
     logging.info(f'#train: {len(train_dataset)}')
     logging.info(f'#valid: {len(val_dataset)}')
     logging.info(f'#test: {len(test_dataset)}')
 
-    # All true triples
+    # Logs details of model
     pe_model = Model.build_model(args)
 
     logging.info('Model Parameter Configuration:')
@@ -78,7 +78,11 @@ def main(args):
 
     if args.do_train:
         # Set training dataloader iterator
-        train_dataloader = Dataset.get_loader(args.path, "train", args.batch_size, word2id)
+        train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                                   batch_size=args.batch_size,
+                                                   shuffle=args.do_train,
+                                                   num_workers=max(1, args.cpu_num // 2),
+                                                   collate_fn=dataset.collate_fn)
         train_iterator = iter(train_dataloader)
 
         # Set training configuration
@@ -112,7 +116,7 @@ def main(args):
     logging.info(f'init_step = {init_step}')
     logging.info(f'learning_rate = {current_learning_rate}')
     logging.info(f'batch_size = {args.batch_size}')
-    logging.info(f'hidden_dim = {args.hidden_dim}')
+    logging.info(f'hidden_dim = {args.d_model}')
 
     # Set valid dataloader as it would be evaluated during training
 

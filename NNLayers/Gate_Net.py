@@ -168,7 +168,7 @@ class Gate_Net(nn.Module):
 
     def compute_gate(self,
                      score: T) -> Tuple[T, T]:
-        assert score.size()[0] > 4
+        #assert score.size()[0] > 4
         score = score[1: -1]
         fwd_gate = self.compute_prob(
             self.pad_score(score),

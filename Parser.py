@@ -23,9 +23,12 @@ def parse_args(args=None):
 
 
     parser.add_argument('--data_path', type=str, default=None)
-    parser.add_argument('--save_path', type=str, default=None)
-    parser.add_argument('--score_type', default='dot', type=str)
+    parser.add_argument('--dataset', type=str, default='cnndm', help='cnndm or book')
+    parser.add_argument('-save', '--save_path', default=None, type=str)
+    #parser.add_argument()
 
+    parser.add_argument('--score_type', default='dot', type=str)
+    parser.add_argument('-v', '--vocab_size', default=30000, type=int)
     parser.add_argument('-ed', '--emb_dim', default=500, type=int)
     parser.add_argument('-md', '--d_model', default=500, type=int)
     parser.add_argument('-b', '--batch_size', default=1024, type=int)
@@ -38,7 +41,6 @@ def parse_args(args=None):
     parser.add_argument('-lr', '--learning_rate', default=0.0001, type=float)
     parser.add_argument('-cpu', '--cpu_num', default=10, type=int)
     parser.add_argument('-init', '--init_checkpoint', default=None, type=str)
-    parser.add_argument('-save', '--save_path', default=None, type=str)
     parser.add_argument('--max_steps', default=100000, type=int)
     parser.add_argument('--warm_up_steps', default=None, type=int)
 
