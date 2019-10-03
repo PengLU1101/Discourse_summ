@@ -62,13 +62,13 @@ class PositionalEncoding(nn.Module):
 class WordEmbedding(nn.Module):
     def __init__(self,
                  vocab: int,
-                 d_emb: int):
+                 dim: int):
         super(WordEmbedding, self).__init__()
-        self.lut = nn.Embedding(vocab, d_emb)
-        self.d_emb = d_emb
-        scope = np.sqrt(1.0 / d_emb)
+        self.lut = nn.Embedding(vocab, dim)
+        self.dim = dim
+        scope = np.sqrt(1.0 / dim)
         self.lut.weight.data.uniform_(-scope, scope)
-        self.lut.weight.data[0] = torch.zeros(1, d_emb)
+        self.lut.weight.data[0] = torch.zeros(1, dim)
 
     def forward(self, x: T) -> T:
         """

@@ -24,6 +24,8 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.Emb_Layer = emb_layer
         self.Enc_Layer = enc_layer
+        if emb_layer.dim != enc_layer.d_model:
+            self.prejector = nn.Linear(emb_layer.dim, enc_layer.d_model)
 
     def forward(self,
                 src: T,
@@ -33,6 +35,8 @@ class Encoder(nn.Module):
         rep = self.Enc_Layer(
             src=rep,
             src_key_padding_mask=mask.eq(0)).permute(1, 0, 2)[:, 0, :]
+        if self.emb_layer.dim != self.enc_layer.d_model:
+            rep = self.prejector(rep)
         return [torch.index_select(rep,
                                   dim=0,
                                   index=torch.LongTensor(idx).to(src.device)) for idx in idx_list]
