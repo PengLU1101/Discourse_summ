@@ -75,12 +75,12 @@ class PEmodel(nn.Module):
     @staticmethod
     def train_step(model,
                    optimizer,
-                   data,
+                   data_iterator,
                    args):
         model.train()
         optimizer.zero_grad()
 
-        Tensor_dict, token_dict, idx_dict = data
+        Tensor_dict, token_dict, idx_dict = next(data_iterator)
         pos_loss, neg_loss = model(
             Tensor_dict['src'],
             Tensor_dict['mask_src'],
@@ -103,10 +103,10 @@ class PEmodel(nn.Module):
 
     @staticmethod
     def test_step(model,
-                  data,
+                  data_iterator,
                   args):
         model.eval()
-        Tensor_dict, token_dict, idx_dict = data
+        Tensor_dict, token_dict, idx_dict = next(data_iterator)
         pos_loss, neg_loss = model(
             Tensor_dict['src'],
             Tensor_dict['mask_src'],
