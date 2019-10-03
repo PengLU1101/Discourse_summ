@@ -66,6 +66,7 @@ class WordEmbedding(nn.Module):
         super(WordEmbedding, self).__init__()
         self.lut = nn.Embedding(vocab, dim)
         self.dim = dim
+        self.vocab = vocab
         scope = np.sqrt(1.0 / dim)
         self.lut.weight.data.uniform_(-scope, scope)
         self.lut.weight.data[0] = torch.zeros(1, dim)

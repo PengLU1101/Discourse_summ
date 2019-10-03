@@ -29,8 +29,7 @@ python -u $CODE_PATH/run.py --do_train \
     --do_test \
     --data_path $FULL_DATA_PATH \
     --model $MODEL \
-    -n $NEGATIVE_SAMPLE_SIZE -b $BATCH_SIZE -d $HIDDEN_DIM \
-    -g $GAMMA -a $ALPHA -adv \
+    -b $BATCH_SIZE -md $HIDDEN_DIM -ed $EMBEDDING_DIM \
     -lr $LEARNING_RATE --max_steps $MAX_STEPS \
     -save $SAVE --test_batch_size $TEST_BATCH_SIZE \
     ${14} ${15} ${16} ${17} ${18} ${19} ${20}

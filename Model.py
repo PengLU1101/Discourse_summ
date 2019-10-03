@@ -19,23 +19,40 @@ from NNLayers.Predict_Net import Predic_Net
 
 class Encoder(nn.Module):
     def __init__(self,
-                 emb_layer,
-                 enc_layer):
+                 vocab,
+                 emb_dim,
+                 d_model,
+                 nhead,
+                 n_layer,
+                 dropout):
         super(Encoder, self).__init__()
-        self.Emb_Layer = emb_layer
-        self.Enc_Layer = enc_layer
-        if emb_layer.dim != enc_layer.d_model:
-            self.prejector = nn.Linear(emb_layer.dim, enc_layer.d_model)
+
+        # word emb layer
+        self.wordemb = WordEmbedding(vocab, emb_dim)
+        # postition emb layer
+        self.positionemb = PositionalEncoding(dropout, emb_dim)
+        self.enc_layer = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=d_model,
+                                       nhead=nhead,
+                                       dropout=dropout),
+            num_layers=n_layer,
+            norm=nn.LayerNorm(d_model)
+        )
+        self.emb_dim = emb_dim
+        self.d_model = d_model
+
+        if emb_dim != d_model:
+            self.prejector = nn.Linear(emb_dim, d_model)
 
     def forward(self,
                 src: T,
                 mask: T,
                 idx_list: List[List[int]]) -> List[T]:
-        rep = self.Emb_Layer(src).permute(1, 0, 2)
-        rep = self.Enc_Layer(
+        rep = self.positionemb(self.wordemb(src)).permute(1, 0, 2)
+        rep = self.enc_layer(
             src=rep,
             src_key_padding_mask=mask.eq(0)).permute(1, 0, 2)[:, 0, :]
-        if self.emb_layer.dim != self.enc_layer.d_model:
+        if self.emb_layer.wordemb.dim != self.enc_layer.layers.d_model:
             rep = self.prejector(rep)
         return [torch.index_select(rep,
                                   dim=0,
@@ -43,11 +60,23 @@ class Encoder(nn.Module):
 
 class Parser(nn.Module):
     def __init__(self,
-                 score_layer,
-                 gate_layer):
-        super(Parser, self).__init__()
-        self.score_layer = score_layer
-        self.gate_layer = gate_layer
+                 d_model,
+                 dropout,
+                 score_type,
+                 resolution,
+                 hard):
+    super(Parser, self).__init__()
+    self.score_layer = Score_Net(
+        d_model,
+        dropout,
+        score_type
+    )
+    self.gate_layer = Gate_Net(
+        d_model,
+        dropout,
+        resolution,
+        hard
+    )
     def forward(self,
                 rep_srcs: List[T],
                 rep_idx: List[List[int]],
@@ -129,32 +158,21 @@ class PEmodel(nn.Module):
         return log
 
 def build_model(para):
+    encoder = Encoder(
+        para.word2id,
+        para.emb_dim,
+        para.d_model,
+        para.nhead,
+        para.n_layer,
+        para.dropout)
 
-    word_emb = WordEmbedding(para.word2id, para.emb_dim)
-    position_emb = PositionalEncoding(para.dropout, para.emb_dim)
-    emb_layer = Embedding_Net(
-        word_emb,
-        position_emb,
-    )
-    enc_layer = nn.TransformerEncoder(
-        nn.TransformerEncoderLayer(para.emb_dim, para.nhead, para.dropout),
-        num_layers=para.n_layer,
-        norm=nn.LayerNorm(para.d_model)
-    )
-    encoder = Encoder(emb_layer, enc_layer)
-
-    score_layer = Score_Net(
+    parser = Parser(
         para.d_model,
         para.dropout,
-        para.score_type
-    )
-    gate_layer = Gate_Net(
-        para.d_model,
-        para.dropout,
+        para.score_type,
         para.resolution,
         para.hard
     )
-    parser = Parser(score_layer, gate_layer)
 
     predictor = Predic_Net(
         para.d_model,

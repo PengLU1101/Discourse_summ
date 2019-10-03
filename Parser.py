@@ -3,7 +3,7 @@
 # author：Peng time:2019-09-30
 
 import argparse
-import json
+import json, pickle
 import os
 import logging
 
@@ -20,20 +20,23 @@ def parse_args(args=None):
     parser.add_argument('--do_valid', action='store_true')
     parser.add_argument('--do_test', action='store_true')
     parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
+    parser.add_argument('--model', type=str, default='PE_Model')
 
-
-    parser.add_argument('--data_path', type=str, default=None)
+    parser.add_argument('--data_path', type=str, default='/data/rali5/Tmp/lupeng/data/cnn-dailymail')
     parser.add_argument('--dataset', type=str, default='cnndm', help='cnndm or book')
-    parser.add_argument('-save', '--save_path', default=None, type=str)
+    parser.add_argument('-save', '--save_path', default='/u/lupeng/Project/code/Discourse_summ/saved', type=str)
     #parser.add_argument()
 
     parser.add_argument('--score_type', default='dot', type=str)
     parser.add_argument('-v', '--vocab_size', default=30000, type=int)
-    parser.add_argument('-ed', '--emb_dim', default=500, type=int)
-    parser.add_argument('-md', '--d_model', default=500, type=int)
-    parser.add_argument('-b', '--batch_size', default=1024, type=int)
+    parser.add_argument('-ed', '--emb_dim', default=512, type=int)
+    parser.add_argument('-md', '--d_model', default=128, type=int)
+    parser.add_argument('-b', '--batch_size', default=8, type=int)
     parser.add_argument('-t', '--resolution', default=1.0, type=float)
-    parser.add_argument('-h', '--hard', default='dot', type=str)
+    parser.add_argument('--hard', default=True, type=str)
+    parser.add_argument('--nhead', default=8, type=int)
+    parser.add_argument('--dropout', default=0.5, type=float)
+    parser.add_argument('--n_layer', default=2, type=int)
 
     parser.add_argument('-r', '--regularization', default=0.0, type=float)
     parser.add_argument('--test_batch_size', default=4, type=int, help='valid/test batch size')
