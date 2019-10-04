@@ -44,6 +44,7 @@ def main(args):
     set_logger(args)
     if torch.cuda.is_available():
         logging.info('Gpu is avialable! and set args.device = cuda.')
+    args.weight_path = os.path.join(args.data_path, 'word2vec/weight.pkl')
 
     # Write logs to checkpoint and console
     # Logs details of datasets.

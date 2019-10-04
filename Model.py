@@ -167,6 +167,7 @@ def build_model(para):
         para.nhead,
         para.n_layer,
         para.dropout)
+    encoder.wordemb.apply_weights(para.weight_path)
 
     parser = Parser(
         para.d_model,

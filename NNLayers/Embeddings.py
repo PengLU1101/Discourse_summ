@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor as T
 import numpy as np
+import pickle
 
 
 
@@ -67,9 +68,7 @@ class WordEmbedding(nn.Module):
         self.lut = nn.Embedding(vocab, dim)
         self.dim = dim
         self.vocab = vocab
-        scope = np.sqrt(1.0 / dim)
-        self.lut.weight.data.uniform_(-scope, scope)
-        self.lut.weight.data[0] = torch.zeros(1, dim)
+
 
     def forward(self, x: T) -> T:
         """
@@ -81,14 +80,21 @@ class WordEmbedding(nn.Module):
         embeds = self.lut(x)
 
         return embeds
-    def apply_weights(self, weights, fine_tune_flag=True):
+    def apply_weights(self, path, fine_tune_flag=True):
+        scope = np.sqrt(1.0 / self.dim)
+        with open(path, 'r') as f:
+            weight = pickle.load(f)
         if isinstance(weights, np.ndarray):
             self.lut.weight.data.copy_(torch.from_numpy(weights))
         else:
             pass
+        self.lut.weight.data.uniform_(-scope, scope)
+        self.lut.weight.data[1:4] = torch.zeros(3, self.dim)
         if not fine_tune_flag:
             for p in self.lut.parameters():
                 p.requires_grad = False
+        print('FFFFFFFFFFFFFFKKKKKKKKKKKKKKKKKKKKKKK')
+
 
 class Embedding_Net(nn.Module):
     def __init__(self, word_emb, position_emb):

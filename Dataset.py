@@ -14,7 +14,6 @@ import torch
 import torch.utils.data as data
 
 
-
 try:
     PKL_DIR = os.environ['PKL_DIR']
 except KeyError:

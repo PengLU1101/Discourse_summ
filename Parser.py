@@ -38,6 +38,7 @@ def parse_args(args=None):
     parser.add_argument('--nhead', default=8, type=int)
     parser.add_argument('--dropout', default=0., type=float)
     parser.add_argument('--n_layer', default=2, type=int)
+    #parser.add_argument('--weight_path', default='')
 
     parser.add_argument('-r', '--regularization', default=0.0, type=float)
     parser.add_argument('--test_batch_size', default=1, type=int, help='valid/test batch size')
