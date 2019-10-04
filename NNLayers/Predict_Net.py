@@ -66,19 +66,19 @@ class Predic_Net(nn.Module):
                                                 index=torch.LongTensor(neg[i][1]).to(rep_sents[i].device)) for i in range(len(neg))],
                             dim=0
                             ) ##### ORDER MATTERS!!!!!!!!!!!!!!!!!!!!!11
-        fp_lld = self.cpt_logit(fwd_h, fwd_pos)
-        fn_lld = self.cpt_logit(fwd_h, fwd_neg)
-        bp_lld = self.cpt_logit(bwd_h, bwd_pos)
-        bn_lld = self.cpt_logit(bwd_h, bwd_neg)
+        fp_lld = F.logsigmoid(self.cpt_logit(fwd_h, fwd_pos))
+        fn_lld = F.logsigmoid(-self.cpt_logit(fwd_h, fwd_neg))
+        bp_lld = F.logsigmoid(self.cpt_logit(bwd_h, bwd_pos))
+        bn_lld = F.logsigmoid(-self.cpt_logit(bwd_h, bwd_neg))
         pos_loss = torch.mean((fp_lld + bp_lld) / 2)
         neg_loss = torch.mean((fn_lld + bn_lld) / 2)
         return (pos_loss, neg_loss)
 
     def cpt_logit(self, h: T, t: T) -> T:
         if self.score_type == 'bilinear':
-            lld = F.logsigmoid(self.func(h[:, None, :], t[:, None, :]))  # BxNx1
+            lld = self.func(h[:, None, :], t[:, None, :])  # BxNx1
         else:
-            lld = F.logsigmoid(self.func(h[:, None, :], t[:, :, None]))
+            lld = self.func(h[:, None, :], t[:, :, None])
         return lld.squeeze(-1)
 
 

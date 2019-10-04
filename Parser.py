@@ -6,6 +6,7 @@ import argparse
 import json, pickle
 import os
 import logging
+import torch
 
 
 def parse_args(args=None):
@@ -29,19 +30,19 @@ def parse_args(args=None):
 
     parser.add_argument('--score_type', default='dot', type=str)
     parser.add_argument('-v', '--vocab_size', default=30000, type=int)
-    parser.add_argument('-ed', '--emb_dim', default=512, type=int)
-    parser.add_argument('-md', '--d_model', default=128, type=int)
-    parser.add_argument('-b', '--batch_size', default=8, type=int)
-    parser.add_argument('-t', '--resolution', default=1.0, type=float)
+    parser.add_argument('-ed', '--emb_dim', default=256, type=int)
+    parser.add_argument('-md', '--d_model', default=256, type=int)
+    parser.add_argument('-b', '--batch_size', default=2, type=int)
+    parser.add_argument('-t', '--resolution', default=.5, type=float)
     parser.add_argument('--hard', default=True, type=str)
     parser.add_argument('--nhead', default=8, type=int)
-    parser.add_argument('--dropout', default=0.5, type=float)
+    parser.add_argument('--dropout', default=0., type=float)
     parser.add_argument('--n_layer', default=2, type=int)
 
     parser.add_argument('-r', '--regularization', default=0.0, type=float)
-    parser.add_argument('--test_batch_size', default=4, type=int, help='valid/test batch size')
+    parser.add_argument('--test_batch_size', default=1, type=int, help='valid/test batch size')
 
-    parser.add_argument('-lr', '--learning_rate', default=0.0001, type=float)
+    parser.add_argument('-lr', '--learning_rate', default=0.001, type=float)
     parser.add_argument('-cpu', '--cpu_num', default=10, type=int)
     parser.add_argument('-init', '--init_checkpoint', default=None, type=str)
     parser.add_argument('--max_steps', default=100000, type=int)
@@ -76,6 +77,7 @@ def save_model(model, optimizer, save_variable_list, args):
     '''
 
     argparse_dict = vars(args)
+    print(argparse_dict)
     with open(os.path.join(args.save_path, 'config.json'), 'w') as fjson:
         json.dump(argparse_dict, fjson)
 

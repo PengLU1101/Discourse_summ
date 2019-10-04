@@ -52,7 +52,7 @@ class Encoder(nn.Module):
         rep = self.enc_layer(
             src=rep,
             src_key_padding_mask=mask.eq(0)).permute(1, 0, 2)[:, 0, :]
-        if self.emb_layer.wordemb.dim != self.enc_layer.layers.d_model:
+        if self.emb_dim != self.d_model:
             rep = self.prejector(rep)
         return [torch.index_select(rep,
                                   dim=0,
@@ -65,18 +65,18 @@ class Parser(nn.Module):
                  score_type,
                  resolution,
                  hard):
-    super(Parser, self).__init__()
-    self.score_layer = Score_Net(
-        d_model,
-        dropout,
-        score_type
-    )
-    self.gate_layer = Gate_Net(
-        d_model,
-        dropout,
-        resolution,
-        hard
-    )
+        super(Parser, self).__init__()
+        self.score_layer = Score_Net(
+            d_model,
+            dropout,
+            score_type
+        )
+        self.gate_layer = Gate_Net(
+            d_model,
+            dropout,
+            resolution,
+            hard
+        )
     def forward(self,
                 rep_srcs: List[T],
                 rep_idx: List[List[int]],
@@ -114,14 +114,16 @@ class PEmodel(nn.Module):
         optimizer.zero_grad()
 
         Tensor_dict, token_dict, idx_dict = next(data_iterator)
-        pos_loss, neg_loss = model(
-            Tensor_dict['src'],
-            Tensor_dict['mask_src'],
-            idx_dict['rep_idx'],
-            idx_dict['score_idx']
-        )
-        loss = (pos_loss - neg_loss) / 2
 
+        pos_loss, neg_loss = model(
+            Tensor_dict['src'].cuda(),
+            Tensor_dict['mask_src'].cuda(),
+            idx_dict['rep_idx'],
+            idx_dict['score_idx'],
+            idx_dict['neg_idx']
+        )
+        loss = -(pos_loss + neg_loss) / 2
+        #loss = -pos_loss
         loss.backward()
         optimizer.step()
 

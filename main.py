@@ -27,6 +27,7 @@ def main(args):
     # prepare dataset
     # build model/optimizer
     #
+    args.do_train = True
     if (not args.do_train) and (not args.do_valid) and (not args.do_test):
         raise ValueError('one of train/val/test mode must be choosed.')
 
@@ -42,7 +43,6 @@ def main(args):
         os.makedirs(args.save_path)
     set_logger(args)
     if torch.cuda.is_available():
-        args.device = torch.device('cuda')
         logging.info('Gpu is avialable! and set args.device = cuda.')
 
     # Write logs to checkpoint and console
@@ -71,13 +71,13 @@ def main(args):
     pe_model = Model.build_model(args)
 
     logging.info('Model Parameter Configuration:')
-    for name, param in pe_model.named_parameters():
-        logging.info(
-            f'Parameter {name}: {str(param.size())}, require_grad = {str(param.requires_grad)}'
-        )
+    #for name, param in pe_model.named_parameters():
+    #    logging.info(
+    #        f'Parameter {name}: {str(param.size())}, require_grad = {str(param.requires_grad)}'
+    #    )
 
     if torch.cuda.is_available():
-        pe_model = pe_model.to(args.device )
+        pe_model = pe_model.cuda()
 
     if args.do_train:
         # Set training dataloader iterator
@@ -85,8 +85,8 @@ def main(args):
                                                    batch_size=args.batch_size,
                                                    shuffle=args.do_train,
                                                    num_workers=max(1, args.cpu_num // 2),
-                                                   collate_fn=dataset.collate_fn)
-        train_iterator = iter(train_dataloader)
+                                                   collate_fn=train_dataset.collate_fn)
+        #train_iterator = iter(train_dataloader)
 
         # Set training configuration
         current_learning_rate = args.learning_rate
@@ -127,9 +127,10 @@ def main(args):
         training_logs = []
 
         # Training Loop
+        train_iter = iter(train_loader)
         for step in range(init_step, args.max_steps):
             #for i in range(len(train_iterator)):
-            log = pe_model.train_step(pe_model, optimizer, train_iterator, args)
+            log = pe_model.train_step(pe_model, optimizer, train_iter, args)
 
 
             training_logs.append(log)
