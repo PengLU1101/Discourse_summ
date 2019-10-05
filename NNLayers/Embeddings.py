@@ -80,10 +80,10 @@ class WordEmbedding(nn.Module):
         embeds = self.lut(x)
 
         return embeds
-    def apply_weights(self, path, fine_tune_flag=True):
+    def apply_weights(self, weights, fine_tune_flag=True):
         scope = np.sqrt(1.0 / self.dim)
-        with open(path, 'r') as f:
-            weight = pickle.load(f)
+        #with open(path, 'r') as f:
+        #    weight = pickle.load(f)
         if isinstance(weights, np.ndarray):
             self.lut.weight.data.copy_(torch.from_numpy(weights))
         else:
@@ -93,8 +93,6 @@ class WordEmbedding(nn.Module):
         if not fine_tune_flag:
             for p in self.lut.parameters():
                 p.requires_grad = False
-        print('FFFFFFFFFFFFFFKKKKKKKKKKKKKKKKKKKKKKK')
-
 
 class Embedding_Net(nn.Module):
     def __init__(self, word_emb, position_emb):

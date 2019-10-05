@@ -30,8 +30,8 @@ def parse_args(args=None):
 
     parser.add_argument('--score_type', default='dot', type=str)
     parser.add_argument('-v', '--vocab_size', default=30000, type=int)
-    parser.add_argument('-ed', '--emb_dim', default=256, type=int)
-    parser.add_argument('-md', '--d_model', default=256, type=int)
+    parser.add_argument('-ed', '--emb_dim', default=128, type=int)
+    parser.add_argument('-md', '--d_model', default=128, type=int)
     parser.add_argument('-b', '--batch_size', default=2, type=int)
     parser.add_argument('-t', '--resolution', default=.5, type=float)
     parser.add_argument('--hard', default=True, type=str)

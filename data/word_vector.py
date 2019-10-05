@@ -39,17 +39,20 @@ def get_word2vec(path):
         key, v = line.split(' ')[0], [float(x) for x in line.split(' ')[1:]]
         if key in word2id:
             weight[word2id[key], :] = v
-
-    path_save = os.path.join(path, 'word2vec/weight.pkl')
-    with open(path_save, 'wb+') as f:
-        pickle.dump(weight, f)
+    path_save = os.path.join(path, 'word2vec/weight.npy')
+    np.save(path_save, weight)
+    # with open(path_save, 'wb+') as f:
+    #     #pickle.dump(weight, f)
+    #     np.save(weight)
 
 
 
 def test():
     path = '/data/rali5/Tmp/lupeng/data/cnn-dailymail'
     get_word2vec(path)
-
+    #with open(, 'r') as f:
+    weight = np.load(os.path.join(path, 'word2vec/weight.npy'))
+    print(type(weight))
 
 if __name__ == "__main__":
     test()

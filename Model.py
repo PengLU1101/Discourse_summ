@@ -114,6 +114,7 @@ class PEmodel(nn.Module):
         optimizer.zero_grad()
 
         Tensor_dict, token_dict, idx_dict = next(data_iterator)
+        print(min([len(x) for x in idx_dict['rep_idx']]))
 
         pos_loss, neg_loss = model(
             Tensor_dict['src'].cuda(),
@@ -159,7 +160,7 @@ class PEmodel(nn.Module):
 
         return log
 
-def build_model(para):
+def build_model(para, weight):
     encoder = Encoder(
         para.word2id,
         para.emb_dim,
@@ -167,7 +168,7 @@ def build_model(para):
         para.nhead,
         para.n_layer,
         para.dropout)
-    encoder.wordemb.apply_weights(para.weight_path)
+    encoder.wordemb.apply_weights(weight)
 
     parser = Parser(
         para.d_model,

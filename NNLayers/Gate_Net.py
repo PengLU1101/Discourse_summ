@@ -148,8 +148,9 @@ class Gate_Net(nn.Module):
             [torch.zeros(score.size(0)).to(score.device), score],
             dim=0
         )
-        if score.size()[0] == 1:
-            print('fk it!!!!!!!!!!!!!!!!!!!!')
+        if score.size()[0] < 4:
+            print('fk it!!!!!!!!!!!!!!!!!!!!', score.size())
+        #print(score.size())
         return torch.stack(
             [pad_score[i: i + score.size()[0]] for i in range(score.size()[0] - 1, 0, -1)],
             dim=0

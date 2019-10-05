@@ -44,7 +44,8 @@ def main(args):
     set_logger(args)
     if torch.cuda.is_available():
         logging.info('Gpu is avialable! and set args.device = cuda.')
-    args.weight_path = os.path.join(args.data_path, 'word2vec/weight.pkl')
+    args.weight_path = os.path.join(args.data_path, 'word2vec/weight.npy')
+    weight = np.load(args.weight_path)
 
     # Write logs to checkpoint and console
     # Logs details of datasets.
@@ -69,7 +70,7 @@ def main(args):
     logging.info(f'#test: {len(test_dataset)}')
 
     # Logs details of model
-    pe_model = Model.build_model(args)
+    pe_model = Model.build_model(args, weight)
 
     logging.info('Model Parameter Configuration:')
     #for name, param in pe_model.named_parameters():
