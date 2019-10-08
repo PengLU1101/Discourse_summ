@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 def make_json(path, split):
     assert split in ('train', 'val', 'test')
-    deliter = re.compile(r"([.!！?？；;])")
+    deliter = re.compile(r"([.!！?？])")
     src_path = os.path.join(path, split+'.txt.src')
     tgt_path = os.path.join(path, split+'.txt.tgt.tagged')
     with open(src_path, 'r') as fr, open(tgt_path, 'r') as ft:
@@ -23,11 +23,12 @@ def make_json(path, split):
             _src = sent_tokenize(x)
             _tgt = sent_tokenize(y)
             for i, line in enumerate(_src):
-                if len(line.split(" ")) <= 40:
+                if len(line.split(" ")) <= 50:
                     src_l.append(line)
-                else:
-                    splits = re.split(deliter, line)
-                    src_l + = norm_line(splits)
+                elif len(line.split(" ")) >= 100:
+                    print(f"the fk line: \n {line}")
+                    #splits = re.split(deliter, line)
+                    #src_l += norm_line(splits)
 
 def norm_line(line):
     if len(line) % 2 != 0:
@@ -39,15 +40,13 @@ def norm_line(line):
     else:
         _ = [x + ' ' + y for x, y in zip(o, e)]
     for i, x in enumerate(_):
-        if len(x.split(' ')) > 40:
-            _[i] = ' '.join(x.split(' '))
-    return
+        if len(x.split(' ')) > 50:
+            _[i] = ' '.join(x.split(' ')[:50])
+    for i, x in enumerate(_):
+        print(f'{i} is: \n {x}')
+    return _
 
 
 
-
-
-
-with open()
 if __name__ == "__main__":
-    test()
+    make_json("/data/rali5/Tmp/lupeng/data/new_cnndm", 'val')
