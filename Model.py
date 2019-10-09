@@ -49,11 +49,11 @@ class Encoder(nn.Module):
                 mask: T,
                 idx_list: List[List[int]]) -> List[T]:
         rep = self.positionemb(self.wordemb(src)).permute(1, 0, 2)
+        if self.emb_dim != self.d_model:
+            rep = self.prejector(rep)
         rep = self.enc_layer(
             src=rep,
             src_key_padding_mask=mask.eq(0)).permute(1, 0, 2)[:, 0, :]
-        if self.emb_dim != self.d_model:
-            rep = self.prejector(rep)
         return [torch.index_select(rep,
                                   dim=0,
                                   index=torch.LongTensor(idx).to(src.device)) for idx in idx_list]
@@ -114,7 +114,6 @@ class PEmodel(nn.Module):
         optimizer.zero_grad()
 
         Tensor_dict, token_dict, idx_dict = next(data_iterator)
-        print(min([len(x) for x in idx_dict['rep_idx']]))
 
         pos_loss, neg_loss = model(
             Tensor_dict['src'].cuda(),
