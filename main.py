@@ -92,7 +92,7 @@ def main(args):
 
         # Set training configuration
         current_learning_rate = args.learning_rate
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.SGD(
             filter(lambda p: p.requires_grad, pe_model.parameters()),
             lr=current_learning_rate
         )

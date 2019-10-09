@@ -48,7 +48,7 @@ class CnnDmDataset(data.Dataset):
         with open(os.path.join(self._data_path, f'{i}.json')) as f:
             js = json.loads(f.read())
         src_list = list(map(self.convert2list, js['article']))
-        tgt_list = list(map(self.convert2list, js['abstract']))
+        tgt_list = list(map(self.convert2list, js['summary']))
         js['src_idx'] = src_list
         js['tgt_idx'] = tgt_list
         return js
@@ -124,7 +124,7 @@ class CnnDmDataset(data.Dataset):
                        'mask_tgt': mask_tgt  # (B x num_tgt) x max_seq_tgt_len
                        }
         token_dict = {'article': [_['article'] for _ in data],
-                      'abstract': [_['abstract'] for _ in data]
+                      'summary': [_['summary'] for _ in data]
                       }
         src_idxbylen = get_idx_by_lens(src_doc_list)
         score_idxbylen = get_idx_by_lens([x + 1 for x in src_doc_list])
