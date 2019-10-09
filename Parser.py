@@ -40,14 +40,14 @@ def parse_args(args=None):
     parser.add_argument('--n_layer', default=2, type=int)
     #parser.add_argument('--weight_path', default='')
 
-    parser.add_argument('-r', '--regularization', default=0.0, type=float)
+    parser.add_argument('-r', '--regularization', default=1.0, type=float)
     parser.add_argument('--test_batch_size', default=1, type=int, help='valid/test batch size')
 
-    parser.add_argument('-lr', '--learning_rate', default=0.001, type=float)
+    parser.add_argument('-lr', '--learning_rate', default=0.01, type=float)
     parser.add_argument('-cpu', '--cpu_num', default=10, type=int)
     parser.add_argument('-init', '--init_checkpoint', default=None, type=str)
     parser.add_argument('--max_steps', default=100000, type=int)
-    parser.add_argument('--warm_up_steps', default=None, type=int)
+    parser.add_argument('--warm_up_steps', default=1000, type=int)
 
     parser.add_argument('--save_checkpoint_steps', default=10000, type=int)
     parser.add_argument('--valid_steps', default=10000, type=int)

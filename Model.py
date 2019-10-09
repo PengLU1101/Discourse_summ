@@ -122,8 +122,8 @@ class PEmodel(nn.Module):
             idx_dict['score_idx'],
             idx_dict['neg_idx']
         )
-        loss = -(pos_loss + neg_loss) / 2
-        #loss = -pos_loss
+        #loss = -(pos_loss + neg_loss) / 2
+        loss = -pos_loss
         loss.backward()
         optimizer.step()
 

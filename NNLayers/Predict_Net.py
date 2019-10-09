@@ -79,7 +79,7 @@ class Predic_Net(nn.Module):
             lld = self.func(h[:, None, :], t[:, None, :])  # BxNx1
         else:
             lld = self.func(h[:, None, :], t[:, :, None])
-        return lld.squeeze(-1)
+        return lld.squeeze(-1) #/ 512#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
