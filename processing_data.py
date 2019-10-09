@@ -19,16 +19,23 @@ def make_json(path, split):
         slines = fr.readlines()
         tlines = ft.readlines()
         src_l, tgt_l = [], []
+        too_long = []
         for x, y in tqdm(zip(slines, tlines)):
             _src = sent_tokenize(x)
             _tgt = sent_tokenize(y)
             for i, line in enumerate(_src):
                 if len(line.split(" ")) <= 50:
                     src_l.append(line)
-                elif len(line.split(" ")) >= 100:
-                    print(f"the fk line: \n {line}")
-                    #splits = re.split(deliter, line)
-                    #src_l += norm_line(splits)
+                # elif len(line.split(" ")) >= 100:
+                #     print(f"the fk line: \n {line}")
+                #     splits = re.split(deliter, line)
+                #     src_l += norm_line(splits)
+                else:
+                    too_long.append(len(line.split(" ")))
+    too_long_path = os.path.join(path, split+'.toolong.pkl')
+    with open(too_long_path, 'w+') as f:
+        pickle.dump(too_long, too_long_path)
+
 
 def norm_line(line):
     if len(line) % 2 != 0:

@@ -23,7 +23,7 @@ def parse_args(args=None):
     parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
     parser.add_argument('--model', type=str, default='PE_Model')
 
-    parser.add_argument('--data_path', type=str, default='/data/rali5/Tmp/lupeng/data/cnn-dailymail')
+    parser.add_argument('--data_path', type=str, default='/data/rali5/Tmp/lupeng/data/new_cnndm')
     parser.add_argument('--dataset', type=str, default='cnndm', help='cnndm or book')
     parser.add_argument('-save', '--save_path', default='/u/lupeng/Project/code/Discourse_summ/saved', type=str)
     #parser.add_argument()
