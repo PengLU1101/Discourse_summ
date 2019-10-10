@@ -122,8 +122,8 @@ class PEmodel(nn.Module):
             idx_dict['score_idx'],
             idx_dict['neg_idx']
         )
-        #loss = -(pos_loss + neg_loss) / 2
-        loss = -pos_loss
+        loss = -(pos_loss + neg_loss) / 2
+        #loss = -pos_loss
         loss.backward()
         optimizer.step()
 
@@ -172,14 +172,14 @@ def build_model(para, weight):
     parser = Parser(
         para.d_model,
         para.dropout,
-        para.score_type,
+        para.score_type_parser,
         para.resolution,
         para.hard
     )
 
     predictor = Predic_Net(
         para.d_model,
-        para.score_type
+        para.score_type_predictor
     )
 
     return PEmodel(encoder, parser, predictor)

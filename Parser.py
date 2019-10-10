@@ -28,7 +28,8 @@ def parse_args(args=None):
     parser.add_argument('-save', '--save_path', default='/u/lupeng/Project/code/Discourse_summ/saved', type=str)
     #parser.add_argument()
 
-    parser.add_argument('--score_type', default='bilinear', type=str)
+    parser.add_argument('--score_type_parser', default='dot', type=str)
+    parser.add_argument('--score_type_predictor', default='bilinear', type=str)
     parser.add_argument('-v', '--vocab_size', default=30000, type=int)
     parser.add_argument('-ed', '--emb_dim', default=128, type=int)
     parser.add_argument('-md', '--d_model', default=512, type=int)
@@ -36,8 +37,8 @@ def parse_args(args=None):
     parser.add_argument('-t', '--resolution', default=.1, type=float)
     parser.add_argument('--hard', default=True, type=str)
     parser.add_argument('--nhead', default=8, type=int)
-    parser.add_argument('--dropout', default=0., type=float)
-    parser.add_argument('--n_layer', default=4, type=int)
+    parser.add_argument('--dropout', default=0.0, type=float)
+    parser.add_argument('--n_layer', default=5, type=int)
     #parser.add_argument('--weight_path', default='')
 
     parser.add_argument('-r', '--regularization', default=1.0, type=float)
