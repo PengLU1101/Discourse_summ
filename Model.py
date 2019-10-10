@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # author：Peng time:2019-07-16
-from typing import List, Tuple, Dict, Union, Callable
+from typing import List, Tuple, Optional, Dict, Union, Callable
 from collections import namedtuple
 import random
 
@@ -47,16 +47,19 @@ class Encoder(nn.Module):
     def forward(self,
                 src: T,
                 mask: T,
-                idx_list: List[List[int]]) -> List[T]:
+                idx_list: Optional[List[List[int]]] = None) -> Union[List[T], T]:
         rep = self.positionemb(self.wordemb(src)).permute(1, 0, 2)
         if self.emb_dim != self.d_model:
             rep = self.prejector(rep)
         rep = self.enc_layer(
             src=rep,
             src_key_padding_mask=mask.eq(0)).permute(1, 0, 2)[:, 0, :]
-        return [torch.index_select(rep,
-                                  dim=0,
-                                  index=torch.LongTensor(idx).to(src.device)) for idx in idx_list]
+        if idx_list:
+            rep = [torch.index_select(rep,
+                                      dim=0,
+                                      index=torch.LongTensor(idx).to(src.device)) for idx in idx_list]
+
+        return rep
 
 class Parser(nn.Module):
     def __init__(self,
@@ -100,10 +103,13 @@ class PEmodel(nn.Module):
                 mask: T,
                 rep_idx: List[List[int]],
                 score_idx: List[List[int]],
-                neg: List[Tuple[List[int], List[int]]]) -> Tuple[T, T]:
+                neg_input: Tuple[T, T],
+                neg_mask: Tuple[T, T]) -> Tuple[T, T]:
         reps: List[T] = self.encoder(input, mask, rep_idx)
+        neg_fwd: T = self.encoder(neg_input[0], neg_mask[0])
+        neg_bwd: T = self.encoder(neg_input[1], neg_mask[1])
         gate_list: List[Tuple[T, T]] = self.parser(reps, rep_idx, score_idx)
-        return self.predictor(reps, gate_list, neg)############## Neg!!!!!!!!!!!!!!!!!!!!!!!
+        return self.predictor(reps, gate_list, neg_fwd, neg_bwd)############## Neg!!!!!!!!!!!!!!!!!!!!!!!
 
     @staticmethod
     def train_step(model,
@@ -120,7 +126,9 @@ class PEmodel(nn.Module):
             Tensor_dict['mask_src'].cuda(),
             idx_dict['rep_idx'],
             idx_dict['score_idx'],
-            idx_dict['neg_idx']
+            (Tensor_dict['nf'].cuda(), Tensor_dict['nb'].cuda()),
+            (Tensor_dict['mnf'].cuda(), Tensor_dict['mnb'].cuda()),
+            #idx_dict['neg_idx']
         )
         loss = -(pos_loss + neg_loss) / 2
         #loss = -pos_loss

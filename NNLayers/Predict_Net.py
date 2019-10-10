@@ -31,7 +31,8 @@ class Predic_Net(nn.Module):
     def forward(self,
                 rep_sents: List[T],
                 gate: List[Tuple[T, T]],
-                neg: List[Tuple[List[int], List[int]]]) -> Tuple[T, T]:
+                fwd_neg: T,
+                bwd_neg: T) -> Tuple[T, T]:
         fwd: List[T] = list(map(
             self.get_sm, 
             rep_sents
@@ -51,21 +52,13 @@ class Predic_Net(nn.Module):
             [rep[1:, :] for rep in rep_sents],
             dim=0
         )
-        fwd_neg = torch.cat([torch.index_select(rep_sents[i],
-                                  dim=0,
-                                  index=torch.LongTensor(neg[i][0]).to(rep_sents[i].device)) for i in range(len(neg))],
-                            dim=0
-        )
+        #fwd_neg = torch.cat(fwd_neg, dim=0)
         bwd_h = torch.cat(doc_bwd, dim=0)
         bwd_pos = torch.cat(
             [rep.flip((0,))[1:, :] for rep in rep_sents],
             dim=0
         )
-        bwd_neg = torch.cat([torch.index_select(rep_sents[i],
-                                                dim=0,
-                                                index=torch.LongTensor(neg[i][1]).to(rep_sents[i].device)) for i in range(len(neg))],
-                            dim=0
-                            ) ##### ORDER MATTERS!!!!!!!!!!!!!!!!!!!!!11
+        #bwd_neg = torch.cat(bwd_neg, dim=0) ##### ORDER MATTERS!!!!!!!!!!!!!!!!!!!!!11
         fp_lld = F.logsigmoid(self.cpt_logit(fwd_h, fwd_pos))
         fn_lld = F.logsigmoid(-self.cpt_logit(fwd_h, fwd_neg))
         bp_lld = F.logsigmoid(self.cpt_logit(bwd_h, bwd_pos))
