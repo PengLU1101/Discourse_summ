@@ -49,19 +49,22 @@ class CnnDmDataset(data.Dataset):
             js = json.loads(f.read())
         src_list = list(map(self.convert2list, js['article']))
         tgt_list = list(map(self.convert2list, js['summary']))
-        js['src_idx'] = src_list
-        js['tgt_idx'] = tgt_list
 
-        for idx in range(lens(js['article'])):
+        neg_list = []
+        for idx in range(2 * lens(js['article']) - 2):
             while True:
                 neg_idx = random.choice(range(self._n_data))
                 if neg_idx != i:
                     break
             with open(os.path.join(self._data_path, f'{neg_idx}.json')) as f:
                 js_neg = json.loads(f.read())
-                js['article']
+                neg_sent = random.choice(js['article'])
+            neg_list.append(self.convert2list(neg_sent))
 
-
+        js['src_idx'] = src_list
+        js['tgt_idx'] = tgt_list
+        js['neg_idx_fwd'] = neg_list[: (lens(js['article']) - 1)]
+        js['neg_idx_bwd'] = neg_list[(lens(js['article']) - 1):]
 
         return js
 
@@ -77,6 +80,7 @@ class CnnDmDataset(data.Dataset):
         n_data = len(list(filter(match, names)))
         return n_data
 
+
     @staticmethod
     def collate_fn(data):
         def get_idx_by_lens(lens_list: List[int]) -> List[List[int]]:
@@ -87,53 +91,63 @@ class CnnDmDataset(data.Dataset):
                 start = idx_list[-1][-1] + 1
             return idx_list
 
-        def get_neglist(lens_list):
-            neg = []
-            for x in lens_list:
-                neg.append((smpneg(list(range(x))), smpneg(list(range(x))[::-1])))
-            return neg
+        def pad_mask(data, name1, name2):
+            chain_src = list(chain.from_iterable([_[name1] for _ in data]))
+            chain_tgt = list(chain.from_iterable([_[name2] for _ in data]))
+            src_lens = [len(_) for _ in chain_src]
+            tgt_lens = [len(_) for _ in chain_tgt]
+            max_src_lens = max(src_lens)
+            max_tgt_lens = max(tgt_lens)
 
-        def smpneg(l):
-            _ = []
-            ll = l + l
-            for i in range(1, len(l)):
-                _ += [random.choice(ll[i + 1: i + 6])]
-            return _
+            padded_src = torch.zeros(len(chain_src), max_src_lens).long()
+            padded_tgt = torch.zeros(len(chain_tgt), max_tgt_lens).long()
+            mask_src = torch.zeros(len(chain_src), max_src_lens).long()
+            mask_tgt = torch.zeros(len(chain_tgt), max_tgt_lens).long()
+
+            for i, sent in enumerate(chain_src):
+                end = src_lens[i]
+                padded_src[i, :end] = torch.LongTensor(sent[:end])
+                mask_src[i, :end] = 1
+            for i, sent in enumerate(chain_tgt):
+                end = tgt_lens[i]
+                padded_tgt[i, :end] = torch.LongTensor(sent[:end])
+                mask_tgt[i, :end] = 1
+
+            return padded_src, padded_tgt, mask_src, mask_tgt
+
+        # def get_neglist(lens_list):
+        #     neg = []
+        #     for x in lens_list:
+        #         neg.append((smpneg(list(range(x))), smpneg(list(range(x))[::-1])))
+        #     return neg
+
+        # def smpneg(l):
+        #     _ = []
+        #     ll = l + l
+        #     for i in range(1, len(l)):
+        #         _ += [random.choice(ll[i + 1: i + 6])]
+        #     return _
         src_doc_list: List[int] = []  # count num of sentences in a doc for this batch \
         tgt_doc_list: List[int] = []  # both of two list should have same length as batch size.
+        negf_doc_list: List[int] = []
+        negb_doc_list: List[int] = []
         for _ in data:
             src_doc_list += [len(_['src_idx'])]
             tgt_doc_list += [len(_['tgt_idx'])]
-        chain_src = list(chain.from_iterable([_['src_idx'] for _ in data]))
-        chain_tgt = list(chain.from_iterable([_['tgt_idx'] for _ in data]))
-        src_lens = [len(_) for _ in chain_src]
-        tgt_lens = [len(_) for _ in chain_tgt]
-        max_src_lens = max(src_lens)
-        max_tgt_lens = max(tgt_lens)
+            negf_doc_list += [len(_['neg_idx_fwd'])]
+            negb_doc_list += [len(_['neg_idx_bwd'])]
 
-        padded_src = torch.zeros(len(chain_src), max_src_lens).long()
-        padded_tgt = torch.zeros(len(chain_tgt), max_tgt_lens).long()
-        mask_src = torch.zeros(len(chain_src), max_src_lens).long()
-        mask_tgt = torch.zeros(len(chain_tgt), max_tgt_lens).long()
+        padded_src, padded_tgt, mask_src, mask_tgt = pad_mask(data, 'src_idx', 'tgt_idx')
+        padded_nf, padded_nb, mask_nf, mask_nb = pad_mask(data, 'neg_idx_fwd', 'neg_idx_bwd')
 
-        for i, sent in enumerate(chain_src):
-            end = src_lens[i]
-            padded_src[i, :end] = torch.LongTensor(sent[:end])
-            mask_src[i, :end] = 1
-        for i, sent in enumerate(chain_tgt):
-            end = tgt_lens[i]
-            padded_tgt[i, :end] = torch.LongTensor(sent[:end])
-            mask_tgt[i, :end] = 1
-        # if torch.cuda.is_available():
-        #     padded_src = padded_src.cuda()
-        #     padded_tgt = padded_tgt.cuda()
-        #     mask_src = mask_src.cuda()
-        #     mask_tgt = mask_tgt.cuda()
-        Tensor_dict = {'src': padded_src,
-                       # (B x num_src) x max_seq_src_len : num_ is not sure. so (B x num_) is changing
+        Tensor_dict = {'src': padded_src,  # (B x num_src) x max_seq_src_len : num_ is not sure. so (B x num_) is changing
                        'tgt': padded_tgt,  # (B x num_tgt) x max_seq_tgt_len
                        'mask_src': mask_src,  # (B x num_src) x max_seq_src_len
-                       'mask_tgt': mask_tgt  # (B x num_tgt) x max_seq_tgt_len
+                       'mask_tgt': mask_tgt,  # (B x num_tgt) x max_seq_tgt_len
+                       'nf': padded_nf,
+                       'nb': padded_nb,
+                       'mnf': mask_nf,
+                       'mnb': mask_nb
                        }
         token_dict = {'article': [_['article'] for _ in data],
                       'summary': [_['summary'] for _ in data]
@@ -141,11 +155,16 @@ class CnnDmDataset(data.Dataset):
         src_idxbylen = get_idx_by_lens(src_doc_list)
         score_idxbylen = get_idx_by_lens([x + 1 for x in src_doc_list])
         tgt_idxbylen = get_idx_by_lens(tgt_doc_list)
-        neg_idx = get_neglist(src_doc_list)
+        nf_idxbylen = get_idx_by_lens(negf_doc_list)
+        nb_idxbylen = get_idx_by_lens(negb_doc_list)
+        #neg_idx = get_neglist(src_doc_list)
         idx_dict = {'rep_idx': src_idxbylen,
                     'score_idx': score_idxbylen,
                     'tgt_idx': tgt_idxbylen,
-                    'neg_idx': neg_idx}
+                    'nf_idx': nf_idxbylen,
+                    'nb_idx': nb_idxbylen
+                    }
+                    #'neg_idx': neg_idx}
         return Tensor_dict, token_dict, idx_dict
 
 
