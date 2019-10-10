@@ -51,7 +51,7 @@ class CnnDmDataset(data.Dataset):
         tgt_list = list(map(self.convert2list, js['summary']))
 
         neg_list = []
-        for idx in range(2 * lens(js['article']) - 2):
+        for idx in range(2 * len(js['article']) - 2):
             while True:
                 neg_idx = random.choice(range(self._n_data))
                 if neg_idx != i:
@@ -63,8 +63,8 @@ class CnnDmDataset(data.Dataset):
 
         js['src_idx'] = src_list
         js['tgt_idx'] = tgt_list
-        js['neg_idx_fwd'] = neg_list[: (lens(js['article']) - 1)]
-        js['neg_idx_bwd'] = neg_list[(lens(js['article']) - 1):]
+        js['neg_idx_fwd'] = neg_list[: (len(js['article']) - 1)]
+        js['neg_idx_bwd'] = neg_list[(len(js['article']) - 1):]
 
         return js
 
@@ -155,14 +155,14 @@ class CnnDmDataset(data.Dataset):
         src_idxbylen = get_idx_by_lens(src_doc_list)
         score_idxbylen = get_idx_by_lens([x + 1 for x in src_doc_list])
         tgt_idxbylen = get_idx_by_lens(tgt_doc_list)
-        nf_idxbylen = get_idx_by_lens(negf_doc_list)
-        nb_idxbylen = get_idx_by_lens(negb_doc_list)
+        #nf_idxbylen = get_idx_by_lens(negf_doc_list)
+        #nb_idxbylen = get_idx_by_lens(negb_doc_list)
         #neg_idx = get_neglist(src_doc_list)
         idx_dict = {'rep_idx': src_idxbylen,
                     'score_idx': score_idxbylen,
                     'tgt_idx': tgt_idxbylen,
-                    'nf_idx': nf_idxbylen,
-                    'nb_idx': nb_idxbylen
+                    #'nf_idx': nf_idxbylen,
+                    #'nb_idx': nb_idxbylen
                     }
                     #'neg_idx': neg_idx}
         return Tensor_dict, token_dict, idx_dict
