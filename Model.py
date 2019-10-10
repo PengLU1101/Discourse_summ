@@ -124,6 +124,7 @@ class PEmodel(nn.Module):
         )
         loss = -(pos_loss + neg_loss) / 2
         #loss = -pos_loss
+        #loss = -neg_loss
         loss.backward()
         optimizer.step()
 

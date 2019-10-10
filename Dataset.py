@@ -51,6 +51,18 @@ class CnnDmDataset(data.Dataset):
         tgt_list = list(map(self.convert2list, js['summary']))
         js['src_idx'] = src_list
         js['tgt_idx'] = tgt_list
+
+        for idx in range(lens(js['article'])):
+            while True:
+                neg_idx = random.choice(range(self._n_data))
+                if neg_idx != i:
+                    break
+            with open(os.path.join(self._data_path, f'{neg_idx}.json')) as f:
+                js_neg = json.loads(f.read())
+                js['article']
+
+
+
         return js
 
     def convert2list(self, s: str):
