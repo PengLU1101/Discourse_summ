@@ -49,17 +49,22 @@ class CnnDmDataset(data.Dataset):
             js = json.loads(f.read())
         src_list = list(map(self.convert2list, js['article']))
         tgt_list = list(map(self.convert2list, js['summary']))
+        neg_list = list(map(self.convert2list, js['neg'])
 
-        neg_list = []
-        for idx in range(2 * len(js['article']) - 2):
-            while True:
-                neg_idx = random.choice(range(self._n_data))
-                if neg_idx != i:
-                    break
-            with open(os.path.join(self._data_path, f'{neg_idx}.json')) as f:
-                js_neg = json.loads(f.read())
-                neg_sent = random.choice(js['article'])
-            neg_list.append(self.convert2list(neg_sent))
+        # neg_list = []
+        # for idx in range(2 * len(js['article']) - 2):
+        #     neg_idx = random.choice(list(chain(range(0, i), range(i, self._n_data))))
+        #     with open(os.path.join(self._data_path, f'{neg_idx}.json')) as f:
+        #         js_neg = json.loads(f.read())
+        #
+        #         neg_sent_idx = random.choice(range(len(js_neg['article'])))
+        #     neg_list.append(self.convert2list(js_neg['article'][neg_sent_idx]))
+        # while len(neg_list) < 2 * len(js['article']) - 2:
+        #     neg_idx = random.choice(list(chain(range(0, i), range(i, self._n_data))))
+        #     with open(os.path.join(self._data_path, f'{neg_idx}.json')) as f:
+        #         js_neg = json.loads(f.read())
+        #     neg_list += random.sample(js_neg['article'], min(len(neg_list), len(js['article'])))
+        # neg_list = list(map(self.convert2list, neg_list))
 
         js['src_idx'] = src_list
         js['tgt_idx'] = tgt_list
