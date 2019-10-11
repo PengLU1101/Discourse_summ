@@ -163,9 +163,9 @@ class PEmodel(nn.Module):
         loss = -(pos_loss + neg_loss) / 2
 
         log = {
-            **regularization_log,
-            'positive_sample_loss': positive_sample_loss.item(),
-            'negative_sample_loss': negative_sample_loss.item(),
+            #**regularization_log,
+            'positive_sample_loss': pos_loss.item(),
+            'negative_sample_loss': neg_loss.item(),
             'loss': loss.item()
         }
 
