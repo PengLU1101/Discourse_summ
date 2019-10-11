@@ -3,14 +3,18 @@
 # author：Peng time:2019-07-16
 
 import os
+import time
 import random
 import numpy as np
 import argparse
 import logging
 import json, pickle
+from tqdm import tqdm
 
 import torch
 import numpy as np
+from prefetch_generator import BackgroundGenerator
+from torch.utils.tensorboard import SummaryWriter
 
 import Model
 from Dataset import CnnDmDataset, make_vocab
@@ -27,6 +31,9 @@ def main(args):
     # prepare dataset
     # build model/optimizer
     #
+    np.random.seed(1101)
+    torch.manual_seed(1101)
+    torch.cuda.manual_seed(1101)
     args.do_train = True
     if (not args.do_train) and (not args.do_valid) and (not args.do_test):
         raise ValueError('one of train/val/test mode must be choosed.')
@@ -88,7 +95,6 @@ def main(args):
                                                    shuffle=args.do_train,
                                                    num_workers=max(1, args.cpu_num // 2),
                                                    collate_fn=train_dataset.collate_fn)
-        #train_iterator = iter(train_dataloader)
 
         # Set training configuration
         current_learning_rate = args.learning_rate
@@ -100,6 +106,19 @@ def main(args):
             warm_up_steps = args.warm_up_steps
         else:
             warm_up_steps = args.max_steps // 2
+    if args.do_valid:
+        valid_loader = torch.utils.data.DataLoader(dataset=val_dataset,
+                                                   batch_size=args.test_batch_size,
+                                                   shuffle=False,
+                                                   num_workers=max(1, args.cpu_num // 2),
+                                                   collate_fn=val_dataset.collate_fn)
+    if args.do_test:
+        test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                                  batch_size=args.test_batch_size,
+                                                  shuffle=False,
+                                                  num_workers=max(1, args.cpu_num // 2),
+                                                  collate_fn=test_dataset.collate_fn)
+
 
     if args.init_checkpoint:
         # Restore model from checkpoint directory
@@ -114,7 +133,8 @@ def main(args):
     else:
         logging.info('Ramdomly Initializing {args.model} Model...')
         init_step = 0
-
+    # train_iterator = iter(train_dataloader)
+    start_time = time.time()
     step = init_step
 
     logging.info('Start Training...')
@@ -127,44 +147,58 @@ def main(args):
 
     if args.do_train:
         training_logs = []
-
+        writer = SummaryWriter()
         # Training Loop
-        train_iter = iter(train_loader)
+        #train_iter = iter(train_loader)
         for step in range(init_step, args.max_steps):
             #for i in range(len(train_iterator)):
-            log = pe_model.train_step(pe_model, optimizer, train_iter, args)
+            #pbar = #, total=len(train_loader))
+            # train_iterator = iter(train_dataloader)
+            start_time = time.time()
+            #for istep, data in enumerate(train_loader):
+            for istep, data in enumerate(BackgroundGenerator(train_loader)):
+                log = pe_model.train_step(pe_model, optimizer, data, args)
+                training_logs.append(log)
+
+                if istep >= warm_up_steps:
+                    current_learning_rate = current_learning_rate / 10
+                    logging.info(f'Change learning_rate to {current_learning_rate} at step {istep}')
+                    optimizer = torch.optim.SGD(
+                        filter(lambda p: p.requires_grad, pe_model.parameters()),
+                        lr=current_learning_rate
+                    )
+                    warm_up_steps = warm_up_steps * 3
+
+                if istep % args.save_checkpoint_steps == 0:
+                    save_variable_list = {
+                        'step': istep,
+                        'current_learning_rate': current_learning_rate,
+                        'warm_up_steps': warm_up_steps
+                    }
+                    save_model(pe_model, optimizer, save_variable_list, args)
+
+                if istep % args.log_steps == 0:
+                    metrics = {}
+                    for metric in training_logs[0].keys():
+                        metrics[metric] = sum([log[metric] for log in training_logs]) / len(training_logs)
+                    log_metrics('Training average', istep, metrics)
+                    training_logs = []
+                    for metric in metrics:
+                        writer.add_scalar("train/"+metric, metrics[metric], istep)
 
 
-            training_logs.append(log)
-
-            if step >= warm_up_steps:
-                current_learning_rate = current_learning_rate / 10
-                logging.info(f'Change learning_rate to {current_learning_rate} at step {step}')
-                optimizer = torch.optim.Adam(
-                    filter(lambda p: p.requires_grad, pe_model.parameters()),
-                    lr=current_learning_rate
-                )
-                warm_up_steps = warm_up_steps * 3
-
-            if step % args.save_checkpoint_steps == 0:
-                save_variable_list = {
-                    'step': step,
-                    'current_learning_rate': current_learning_rate,
-                    'warm_up_steps': warm_up_steps
-                }
-                save_model(pe_model, optimizer, save_variable_list, args)
-
-            if step % args.log_steps == 0:
-                metrics = {}
-                for metric in training_logs[0].keys():
-                    metrics[metric] = sum([log[metric] for log in training_logs]) / len(training_logs)
-                log_metrics('Training average', step, metrics)
-                training_logs = []
-
-            if args.do_valid and step % args.valid_steps == 0:
-                logging.info('Evaluating on Valid Dataset...')
-                metrics = pe_model.test_step(pe_model, valid_triples, all_true_triples, args)
-                log_metrics('Valid', step, metrics)
+                if args.do_valid and istep % args.valid_steps == 0:
+                    val_logs = []
+                    logging.info('Evaluating on Valid Dataset...')
+                    for data in valid_loader:
+                        log = pe_model.test_step(pe_model, data, args)
+                        val_logs.append(log)
+                    metrics = {}
+                    for metric in val_logs[0].keys():
+                        metrics[metric] = sum([log[metric] for log in val_logs]) / len(val_logs)
+                    log_metrics('Valid average', istep, metrics)
+                    for metric in metrics:
+                        writer.add_scalar("Valid/"+metric, metrics[metric], istep)
 
         save_variable_list = {
             'step': step,
@@ -173,15 +207,29 @@ def main(args):
         }
         save_model(pe_model, optimizer, save_variable_list, args)
 
-    if args.do_valid:
-        logging.info('Evaluating on Valid Dataset...')
-        metrics = pe_model.test_step(pe_model, valid_triples, all_true_triples, args)
-        log_metrics('Valid', step, metrics)
+        if args.do_valid:
+            val_logs = []
+            logging.info('Evaluating on Valid Dataset...')
+            for data in valid_loader:
+                log = pe_model.test_step(pe_model, data, args)
+                val_logs.append(log)
+            metrics = {}
+            for metric in val_logs[0].keys():
+                metrics[metric] = sum([log[metric] for log in val_logs]) / len(val_logs)
+            log_metrics('Valid average', istep, metrics)
 
-    if args.do_test:
-        logging.info('Evaluating on Test Dataset...')
-        metrics = pe_model.test_step(pe_model, test_triples, all_true_triples, args)
-        log_metrics('Test', step, metrics)
+        if args.do_test:
+            test_logs = []
+            logging.info('Evaluating on Valid Dataset...')
+            for data in test_loader:
+                log = pe_model.test_step(pe_model, data, args)
+                test_logs.append(log)
+            metrics = {}
+            for metric in test_logs[0].keys():
+                metrics[metric] = sum([log[metric] for log in test_logs]) / len(test_logs)
+            log_metrics('test average', istep, metrics)
+            for metric in metrics:
+                writer.add_scalar("test/"+metric, metrics[metric], istep)
 
     if args.evaluate_train:
         logging.info('Evaluating on Training Dataset...')
