@@ -27,6 +27,7 @@ class Predic_Net(nn.Module):
         else:
             self.func: Callable[[T, T], T] = torch.bmm
         self.init_para()
+        self.norm_factor = np.sqrt(dim_hid)
 
     def forward(self,
                 rep_sents: List[T],
@@ -61,10 +62,11 @@ class Predic_Net(nn.Module):
         #bwd_neg = torch.cat(bwd_neg, dim=0) ##### ORDER MATTERS!!!!!!!!!!!!!!!!!!!!!11
         fp_lld = F.logsigmoid(self.cpt_logit(fwd_h, fwd_pos))
         fn_lld = F.logsigmoid(-self.cpt_logit(fwd_h, fwd_neg))
-        bp_lld = F.logsigmoid(self.cpt_logit(bwd_h, bwd_pos))
-        bn_lld = F.logsigmoid(-self.cpt_logit(bwd_h, bwd_neg))
-        pos_loss = torch.mean((fp_lld + bp_lld) / 2)
-        neg_loss = torch.mean((fn_lld + bn_lld) / 2)
+        #bp_lld = F.logsigmoid(self.cpt_logit(bwd_h, bwd_pos))
+        #bn_lld = F.logsigmoid(-self.cpt_logit(bwd_h, bwd_neg))
+        #pos_loss = torch.mean((fp_lld + bp_lld) / 2)
+        #neg_loss = torch.mean((fn_lld + bn_lld) / 2)
+        return (torch.mean(fp_lld), torch.mean(fn_lld))
         return (pos_loss, neg_loss)
 
     def cpt_logit(self, h: T, t: T) -> T:
@@ -72,7 +74,7 @@ class Predic_Net(nn.Module):
             lld = self.func(h[:, None, :], t[:, None, :])  # BxNx1
         else:
             lld = self.func(h[:, None, :], t[:, :, None])
-        return lld.squeeze(-1) / np.sqrt(512)#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        return lld.squeeze(-1) / self.norm_factor
 
 
 
