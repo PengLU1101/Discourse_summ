@@ -114,12 +114,12 @@ class PEmodel(nn.Module):
     @staticmethod
     def train_step(model,
                    optimizer,
-                   data_iterator,
+                   data,
                    args):
         model.train()
         optimizer.zero_grad()
 
-        Tensor_dict, token_dict, idx_dict = next(data_iterator)
+        Tensor_dict, token_dict, idx_dict = data
 
         pos_loss, neg_loss = model(
             Tensor_dict['src'].cuda(),
@@ -147,17 +147,20 @@ class PEmodel(nn.Module):
 
     @staticmethod
     def test_step(model,
-                  data_iterator,
+                  data,
                   args):
         model.eval()
-        Tensor_dict, token_dict, idx_dict = next(data_iterator)
+        Tensor_dict, token_dict, idx_dict = data
         pos_loss, neg_loss = model(
-            Tensor_dict['src'],
-            Tensor_dict['mask_src'],
+            Tensor_dict['src'].cuda(),
+            Tensor_dict['mask_src'].cuda(),
             idx_dict['rep_idx'],
-            idx_dict['score_idx']
+            idx_dict['score_idx'],
+            (Tensor_dict['nf'].cuda(), Tensor_dict['nb'].cuda()),
+            (Tensor_dict['mnf'].cuda(), Tensor_dict['mnb'].cuda()),
+            #idx_dict['neg_idx']
         )
-        loss = (pos_loss - neg_loss) / 2
+        loss = -(pos_loss + neg_loss) / 2
 
         log = {
             **regularization_log,
