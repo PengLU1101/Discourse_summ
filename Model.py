@@ -7,6 +7,8 @@ import random
 
 import torch
 import torch.nn as nn
+from torch.nn.utils.rnn import pack_padded_sequence as pack
+from torch.nn.utils.rnn import pad_packed_sequence as unpack
 import torch.nn.functional as F
 from torch import Tensor as T
 import numpy as np
@@ -17,7 +19,7 @@ from NNLayers.Gate_Net import Gate_Net, Score_Net
 from NNLayers.Predict_Net import Predic_Net
 
 
-class Encoder(nn.Module):
+class TransformerEncoder(nn.Module):
     def __init__(self,
                  vocab,
                  emb_dim,
@@ -25,7 +27,7 @@ class Encoder(nn.Module):
                  nhead,
                  n_layer,
                  dropout):
-        super(Encoder, self).__init__()
+        super(TransformerEncoder, self).__init__()
 
         # word emb layer
         self.wordemb = WordEmbedding(vocab, emb_dim)
@@ -60,6 +62,45 @@ class Encoder(nn.Module):
                                       index=torch.LongTensor(idx).to(src.device)) for idx in idx_list]
 
         return rep
+
+
+class LSTMEncoder(nn.Module):
+    def __init__(self,
+                 vocab,
+                 emb_dim,
+                 d_model,
+                 n_layer,
+                 dropout,
+                 bidirectional):
+        super(LSTMEncoder, self).__init__()
+        self.wordemb = WordEmbedding(vocab, emb_dim)
+        self.rnn = nn.LSTM(
+            emb_dim,
+            d_model,
+            n_layer,
+            bidirectional=bidirectional
+        )
+        self.Dropout = nn.Dropout(dropout)
+        self.bidirectional = bidirectional
+
+    def forward(self,
+                input: T,
+                mask: T,
+                lengths: List[int]) -> Union[List[T], T]:
+        input = input.permute(1, 0, 2)
+        packed_seq = pack(
+            input,
+            lengths,
+            enforce_sorted=False
+        )
+        out, h = self.rnn(self.Dropout(packed_seq))
+        if self.bidirectional:
+            h = torch.stack((h[-1], h[-2]), dim=0)
+        else:
+            h =
+        return h.permute(1, 0, 2)
+
+
 
 class Parser(nn.Module):
     def __init__(self,
@@ -172,13 +213,24 @@ class PEmodel(nn.Module):
         return log
 
 def build_model(para, weight):
-    encoder = Encoder(
-        para.word2id,
-        para.emb_dim,
-        para.d_model,
-        para.nhead,
-        para.n_layer,
-        para.dropout)
+    if para.encoder_type == 'transformer':
+        encoder = TransformerEncoder(
+            para.word2id,
+            para.emb_dim,
+            para.d_model,
+            para.nhead,
+            para.n_layer,
+            para.dropout
+        )
+    elif para.encoder_type == 'LSTM':
+        encoder = LSTMEncoder(
+            para.word2id,
+            para.emb_dim,
+            para.d_model,
+            para.n_layer,
+            para.dropout,
+        )
+
     encoder.wordemb.apply_weights(weight)
 
     parser = Parser(
