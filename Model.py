@@ -86,7 +86,8 @@ class LSTMEncoder(nn.Module):
     def forward(self,
                 input: T,
                 mask: T,
-                lengths: List[int]) -> Union[List[T], T]:
+                lengths: List[int],
+                idx_list: Optional[List[List[int]]] = None) -> Union[List[T], T]:
         input = input.permute(1, 0, 2)
         packed_seq = pack(
             input,
@@ -95,10 +96,16 @@ class LSTMEncoder(nn.Module):
         )
         out, h = self.rnn(self.Dropout(packed_seq))
         if self.bidirectional:
-            h = torch.stack((h[-1], h[-2]), dim=0)
+            h = torch.cat((h[-1], h[-2]), dim=-1)
         else:
-            h =
-        return h.permute(1, 0, 2)
+            h = h[-1]
+        if idx_list:
+            h = [torch.index_select(h,
+                                      dim=0,
+                                      index=torch.LongTensor(idx).to(input.device)) for idx in idx_list]
+
+        return h
+    
 
 
 
