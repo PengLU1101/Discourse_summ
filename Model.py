@@ -96,7 +96,7 @@ class LSTMEncoder(nn.Module):
         )
         out, h = self.rnn(self.Dropout(packed_seq))
         if self.bidirectional:
-            h = torch.cat((h[-1], h[-2]), dim=-1)
+            h = torch.cat((h[-1][-1], h[-1][-2]), dim=-1)
         else:
             h = h[-1]
         if idx_list:
@@ -105,7 +105,7 @@ class LSTMEncoder(nn.Module):
                                       index=torch.LongTensor(idx).to(input.device)) for idx in idx_list]
 
         return h
-    
+
 
 
 
