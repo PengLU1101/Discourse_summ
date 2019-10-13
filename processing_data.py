@@ -6,6 +6,12 @@ import json
 import os
 import pickle
 import re
+import random
+from itertools import chain
+
+
+import argparse
+
 
 from nltk.tokenize import sent_tokenize, word_tokenize
 from tqdm import tqdm
@@ -52,7 +58,7 @@ def make_json(path, split):
         idx = 0
         for x, y in tqdm(zip(slines, tlines)):
             if len(x) < 1:
-                break
+                continue
             _src = sent_tokenize(x)
             _tgt = sent_tokenize(y)
             for i, line in enumerate(_src):
@@ -76,12 +82,46 @@ def make_json(path, split):
             json_file = {'article': src_l, 'summary': _tgt}
             with open(save_json_file, 'w+') as f:
                 json.dump(json_file, f)
-
             idx += 1
     # too_long_path = os.path.join(path, split+'.500file.pkl')
     # with open(too_long_path, 'wb+') as f:
     #     pickle.dump(tgt_l, f)
 
+#287228
+
+
+def add_neg(path, split, part=None, a=None, b=None):
+    jsonfile_dir = os.path.join(path, split)
+    n_files = len(os.listdir(jsonfile_dir))
+    if part:
+        start = (part - 1) * (n_files // 30)
+        end = min(part * (n_files // 30), n_files)
+        print(f"start:{start} \n end:{end}")
+    elif a and b:
+        print('on a part')
+        start = a
+        end = b
+    else:
+        start = 0
+        end = n_files
+    for i in tqdm(range(start, end)):
+        neg_list = []
+        with open(os.path.join(jsonfile_dir, f'{i}.json')) as f:
+            js = json.loads(f.read())
+            if 'neg' in js:
+                continue
+            else:
+                for idx in range(2 * len(js['article']) - 2):
+                    neg_idx = random.choice(list(chain(range(0, i), range(i, n_files))))
+                    with open(os.path.join(jsonfile_dir, f'{neg_idx}.json')) as f:
+                        js_neg = json.loads(f.read())
+
+                        neg_sent = random.choice(js_neg['article'])
+                    neg_list.append(neg_sent)
+
+                js['neg'] = neg_list
+                with open(os.path.join(jsonfile_dir, f'{i}.json'), 'w+') as f:
+                    json.dump(js, f)
 
 
 def norm_line(line):
@@ -105,6 +145,16 @@ def norm_line(line):
 if __name__ == "__main__":
     path = "/data/rali5/Tmp/lupeng/data/cnn-dailymail/finished_files"
     path2 = "/data/rali5/Tmp/lupeng/data/new_cnndm"
-    make_json("/data/rali5/Tmp/lupeng/data/new_cnndm", 'train')
+    #make_json("/data/rali5/Tmp/lupeng/data/new_cnndm", 'val')
+    #make_json("/data/rali5/Tmp/lupeng/data/new_cnndm", 'test')
     #fix_json(path, path2, 'train')
     #show_lens(path2, 'train')
+    parser = argparse.ArgumentParser(
+        description='data processing',
+        usage='train.py [<args>] [-h | --help]'
+    )
+    parser.add_argument('--part', default=0, type=int)
+    parser.add_argument('--a', default=0, type=int)
+    parser.add_argument('--b', default=0, type=int)
+    args = parser.parse_args()
+    add_neg("/data/rali5/Tmp/lupeng/data/new_cnndm", 'train', a=args.a, b=args.b)
