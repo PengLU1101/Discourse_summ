@@ -62,21 +62,36 @@ class Predic_Net(nn.Module):
             dim=0
         )
         #bwd_neg = torch.cat(bwd_neg, dim=0) ##### ORDER MATTERS!!!!!!!!!!!!!!!!!!!!!11
+
         fp_lld = F.logsigmoid(self.cpt_logit(fwd_h, fwd_pos))
         fn_lld = F.logsigmoid(-self.cpt_logit(fwd_h, fwd_neg))
         #bp_lld = F.logsigmoid(self.cpt_logit(bwd_h, bwd_pos))
         #bn_lld = F.logsigmoid(-self.cpt_logit(bwd_h, bwd_neg))
         #pos_loss = torch.mean((fp_lld + bp_lld) / 2)
         #neg_loss = torch.mean((fn_lld + bn_lld) / 2)
+
+
+        if self.score_type == 'denselinear':
+            pass
+            TODO
         return (torch.mean(fp_lld), torch.mean(fn_lld))
         #return (pos_loss, neg_loss)
 
     def cpt_logit(self, h: T, t: T) -> T:
         if self.score_type == 'bilinear':
             lld = self.func(h[:, None, :], t[:, None, :])  # BxNx1
-        else:
+            lld = lld.squeeze(-1) / self.norm_factor
+        elif self.score_type == 'dot':
             lld = self.func(h[:, None, :], t[:, :, None])
-        return lld.squeeze(-1) / self.norm_factor
+            lld = lld.squeeze(-1) / self.norm_factor
+        elif self.score_type == 'denselinear':
+            h = h[:, None, :]
+            t = t[:, None, :],
+            lld = self.func(torch.cat(
+                h, t, h*t, torch.abs(h-t)
+            ))
+
+        return lld
 
 
 
