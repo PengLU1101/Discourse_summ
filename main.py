@@ -167,7 +167,7 @@ def main(args):
                         filter(lambda p: p.requires_grad, pe_model.parameters()),
                         lr=current_learning_rate
                     )
-                    warm_up_steps = warm_up_steps * 3
+                    warm_up_steps = warm_up_steps * 2
 
                 if istep % args.save_checkpoint_steps == 0:
                     save_variable_list = {
@@ -185,6 +185,7 @@ def main(args):
                     training_logs = []
                     for metric in metrics:
                         writer.add_scalar("train/"+metric, metrics[metric], istep)
+                    writer.add_scalar('learning_rate', current_learning_rate, istep)
 
 
                 if args.do_valid and istep % args.valid_steps == 0:
