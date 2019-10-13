@@ -38,7 +38,7 @@ class CnnDmDataset(data.Dataset):
                  word2id: Dict[str, int]) -> None:
         assert split in ['train', 'val', 'test']
         self._data_path = os.path.join(path, split)
-        self._n_data = self._count_data(self._data_path)
+        self._n_data = self._count_data(self._data_path)# // 50
         self.word2id = defaultdict(lambda: word2id['<unk>'], word2id)
 
     def __len__(self) -> int:
@@ -49,7 +49,7 @@ class CnnDmDataset(data.Dataset):
             js = json.loads(f.read())
         src_list = list(map(self.convert2list, js['article']))
         tgt_list = list(map(self.convert2list, js['summary']))
-        neg_list = list(map(self.convert2list, js['neg'])
+        neg_list = list(map(self.convert2list, js['neg']))
 
         # neg_list = []
         # for idx in range(2 * len(js['article']) - 2):
