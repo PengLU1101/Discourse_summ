@@ -107,8 +107,6 @@ class LSTMEncoder(nn.Module):
         return h
 
 
-
-
 class Parser(nn.Module):
     def __init__(self,
                  d_model,
@@ -140,12 +138,14 @@ class PEmodel(nn.Module):
     def __init__(self,
                  encoder,
                  parser,
-                 predictor):
+                 predictor,
+                 loss_func=None):
         super(PEmodel, self).__init__()
         self.encoder = encoder
         self.parser = parser
         self.predictor = predictor
-
+        if loss_func:
+            self.loss_func = loss_func
     def forward(self,
                 input: T,
                 mask: T,
@@ -157,7 +157,14 @@ class PEmodel(nn.Module):
         neg_fwd: T = self.encoder(neg_input[0], neg_mask[0])
         neg_bwd: T = self.encoder(neg_input[1], neg_mask[1])
         gate_list: List[Tuple[T, T]] = self.parser(reps, rep_idx, score_idx)
-        return self.predictor(reps, gate_list, neg_fwd, neg_bwd)############## Neg!!!!!!!!!!!!!!!!!!!!!!!
+        if self.predictor.score_type == 'denselinear':
+            
+            logit = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
+            loss_fwd = self.loss_func(logit, fwd_label)
+            loss_vwd = self.loss_func(logit, bwd_label)
+        else:
+            loss = self.predictor(reps, gate_list, neg_fwd, neg_bwd)############## Neg!!!!!!!!!!!!!!!!!!!!!!!
+        return loss
 
     @staticmethod
     def train_step(model,
