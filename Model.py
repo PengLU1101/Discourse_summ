@@ -158,7 +158,7 @@ class PEmodel(nn.Module):
         neg_bwd: T = self.encoder(neg_input[1], neg_mask[1])
         gate_list: List[Tuple[T, T]] = self.parser(reps, rep_idx, score_idx)
         if self.predictor.score_type == 'denselinear':
-            
+
             logit = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
             loss_fwd = self.loss_func(logit, fwd_label)
             loss_vwd = self.loss_func(logit, bwd_label)
