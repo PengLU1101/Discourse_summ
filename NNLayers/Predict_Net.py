@@ -24,8 +24,10 @@ class Predic_Net(nn.Module):
         self.score_type = score_type
         if score_type == 'bilinear':
             self.func: Callable[[T, T], T] = nn.Bilinear(dim_hid, dim_hid, 1)
-        else:
+        elif score_type == 'dot':
             self.func: Callable[[T, T], T] = torch.bmm
+        elif score_type == 'denselinear':
+            self.func = nn.Linear(4 * dim_hid, 2)
         self.init_para()
         self.norm_factor = np.sqrt(dim_hid)
 
