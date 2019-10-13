@@ -67,7 +67,7 @@ class Predic_Net(nn.Module):
         #pos_loss = torch.mean((fp_lld + bp_lld) / 2)
         #neg_loss = torch.mean((fn_lld + bn_lld) / 2)
         return (torch.mean(fp_lld), torch.mean(fn_lld))
-        return (pos_loss, neg_loss)
+        #return (pos_loss, neg_loss)
 
     def cpt_logit(self, h: T, t: T) -> T:
         if self.score_type == 'bilinear':
