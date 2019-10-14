@@ -158,10 +158,11 @@ class PEmodel(nn.Module):
         neg_bwd: T = self.encoder(neg_input[1], neg_mask[1])
         gate_list: List[Tuple[T, T]] = self.parser(reps, rep_idx, score_idx)
         if self.predictor.score_type == 'denselinear':
+            fwd_label = torch.ones(reps.size(0), rep.size(1), 1)
 
             logit = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
             loss_fwd = self.loss_func(logit, fwd_label)
-            loss_vwd = self.loss_func(logit, bwd_label)
+            loss_bwd = self.loss_func(logit, bwd_label)
         else:
             loss = self.predictor(reps, gate_list, neg_fwd, neg_bwd)############## Neg!!!!!!!!!!!!!!!!!!!!!!!
         return loss
@@ -259,8 +260,11 @@ def build_model(para, weight):
         para.d_model,
         para.score_type_predictor
     )
-
-    return PEmodel(encoder, parser, predictor)
+    if para.score_type_predictor == 'denselinear':
+        loss_func = nn.NLLLoss()
+    else:
+        loss_func = None
+    return PEmodel(encoder, parser, predictor, loss_func)
 
 def get_idx_by_lens(lens_list: List[int]) -> List[List[int]]:
     idx_list: List[List[int]] = []
