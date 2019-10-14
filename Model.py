@@ -161,39 +161,31 @@ class PEmodel(nn.Module):
             lld = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
             fwd_pos_label = torch.ones(
                 lld['fwd_pos'].size(0),
-                lld['fwd_pos'].size(1),
-                1,
                 requires_grad=False
-            )
+            ).to(neg_fwd.device).long()
             fwd_neg_label = torch.zeros(
                 lld['fwd_neg'].size(0),
-                lld['fwd_neg'].size(1),
-                1,
                 requires_grad=False
-            )
-            loss_pos = self.loss_func(lld['fwd_pos'], fwd_pos_label)
-            loss_neg = self.loss_func(lld['fwd_neg'], fwd_neg_label)
+            ).to(neg_fwd.device).long()
+            loss_pos = self.loss_func(lld['fwd_pos'].squeeze(1), fwd_pos_label)
+            loss_neg = self.loss_func(lld['fwd_neg'].squeeze(1), fwd_neg_label)
 
             if self.predictor.bidirectional:
                 bwd_pos_label = torch.ones(
                     lld['bwd_pos'].size(0),
-                    lld['bwd_pos'].size(1),
-                    1,
                     requires_grad=False
-                )
+                ).to(neg_fwd.device).long()
                 bwd_neg_label = torch.zeros(
                     lld['bwd_neg'].size(0),
-                    lld['bwd_neg'].size(1),
-                    1,
                     requires_grad=False
-                )
-                loss_pos = (loss_pos + self.loss_func(lld['bwd_pos'], bwd_pos_label)) / 2
-                loss_neg = (loss_neg + self.loss_func(lld['bwd_neg'], bwd_neg_label)) / 2
+                ).to(neg_fwd.device).long()
+                loss_pos = (loss_pos + self.loss_func(lld['bwd_pos'].squeeze(1), bwd_pos_label)) / 2
+                loss_neg = (loss_neg + self.loss_func(lld['bwd_neg'].squeeze(1), bwd_neg_label)) / 2
 
         else:
             lld = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
             loss_pos = torch.mean(lld['fwd_pos'])
-            loss_neg = torch.mean(lld['bwd_neg'])
+            loss_neg = torch.mean(lld['fwd_neg'])
             if self.predictor.bidirectional:
                 loss_pos = (loss_pos + torch.mean(lld['bwd_pos'])) / 2
                 loss_neg = (loss_neg + torch.mean(lld['bwd_neg'])) / 2
