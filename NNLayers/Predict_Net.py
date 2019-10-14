@@ -18,10 +18,12 @@ StepFunctionType = Callable[[T, StateType], Tuple[T, StateType]]  # pylint: disa
 class Predic_Net(nn.Module):
     def __init__(self,
                  dim_hid: int,
-                 score_type: str) -> None:
+                 score_type: str,
+                 bidirectional: bool = False) -> None:
         super(Predic_Net, self).__init__()
         self.dim_hid = dim_hid
         self.score_type = score_type
+        self.bidirectional = bidirectional
         if score_type == 'bilinear':
             self.func: Callable[[T, T], T] = nn.Bilinear(dim_hid, dim_hid, 1)
         elif score_type == 'dot':
@@ -35,7 +37,7 @@ class Predic_Net(nn.Module):
                 rep_sents: List[T],
                 gate: List[Tuple[T, T]],
                 fwd_neg: T,
-                bwd_neg: T) -> Tuple[T, T]:
+                bwd_neg: T) -> Dict[str, T]:
         fwd: List[T] = list(map(
             self.get_sm, 
             rep_sents
@@ -65,17 +67,18 @@ class Predic_Net(nn.Module):
         if self.score_type == 'denselinear':
             fp_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_pos), dim=-1)
             fn_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_neg), dim=-1)
-            #bp_lld = F.log_softmax(self.cpt_logit(bwd_h, bwd_pos), dim=-1)
-            #bn_lld = F.log_softmax(self.cpt_logit(bwd_h, bwd_neg), dim=-1)
+            if self.bidirectional:
+                bp_lld = F.log_softmax(self.cpt_logit(bwd_h, bwd_pos), dim=-1)
+                bn_lld = F.log_softmax(self.cpt_logit(bwd_h, bwd_neg), dim=-1)
         else:
             fp_lld = F.logsigmoid(self.cpt_logit(fwd_h, fwd_pos))
             fn_lld = F.logsigmoid(-self.cpt_logit(fwd_h, fwd_neg))
-            #bp_lld = F.logsigmoid(self.cpt_logit(bwd_h, bwd_pos))
-            #bn_lld = F.logsigmoid(-self.cpt_logit(bwd_h, bwd_neg))
-            #pos_loss = torch.mean((fp_lld + bp_lld) / 2)
-            #neg_loss = torch.mean((fn_lld + bn_lld) / 2)
+            if self.bidirectional:
+                2
             pos_loss = torch.mean(fp_lld)
             neg_loss = torch.mean(fn_lld)
+        loss = {'fwd_pos': fwd_pos, 'fwd_neg': fwd_neg}
+        if
 
         return (pos_loss, neg_loss)
 
