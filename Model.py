@@ -158,14 +158,46 @@ class PEmodel(nn.Module):
         neg_bwd: T = self.encoder(neg_input[1], neg_mask[1])
         gate_list: List[Tuple[T, T]] = self.parser(reps, rep_idx, score_idx)
         if self.predictor.score_type == 'denselinear':
-            fwd_label = torch.ones(reps.size(0), rep.size(1), 1)
+            lld = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
+            fwd_pos_label = torch.ones(
+                lld['fwd_pos'].size(0),
+                lld['fwd_pos'].size(1),
+                1,
+                requires_grad=False
+            )
+            fwd_neg_label = torch.zeros(
+                lld['fwd_neg'].size(0),
+                lld['fwd_neg'].size(1),
+                1,
+                requires_grad=False
+            )
+            loss_pos = self.loss_func(lld['fwd_pos'], fwd_pos_label)
+            loss_neg = self.loss_func(lld['fwd_neg'], fwd_neg_label)
 
-            logit = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
-            loss_fwd = self.loss_func(logit, fwd_label)
-            loss_bwd = self.loss_func(logit, bwd_label)
+            if self.predictor.bidirectional:
+                bwd_pos_label = torch.ones(
+                    lld['bwd_pos'].size(0),
+                    lld['bwd_pos'].size(1),
+                    1,
+                    requires_grad=False
+                )
+                bwd_neg_label = torch.zeros(
+                    lld['bwd_neg'].size(0),
+                    lld['bwd_neg'].size(1),
+                    1,
+                    requires_grad=False
+                )
+                loss_pos = (loss_pos + self.loss_func(lld['bwd_pos'], bwd_pos_label)) / 2
+                loss_neg = (loss_neg + self.loss_func(lld['bwd_neg'], bwd_neg_label)) / 2
+
         else:
-            loss = self.predictor(reps, gate_list, neg_fwd, neg_bwd)############## Neg!!!!!!!!!!!!!!!!!!!!!!!
-        return loss
+            lld = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
+            loss_pos = torch.mean(lld['fwd_pos'])
+            loss_neg = torch.mean(lld['bwd_neg'])
+            if self.predictor.bidirectional:
+                loss_pos = (loss_pos + torch.mean(lld['bwd_pos'])) / 2
+                loss_neg = (loss_neg + torch.mean(lld['bwd_neg'])) / 2
+        return (loss_pos, loss_neg)
 
     @staticmethod
     def train_step(model,
@@ -258,7 +290,8 @@ def build_model(para, weight):
 
     predictor = Predic_Net(
         para.d_model,
-        para.score_type_predictor
+        para.score_type_predictor,
+        para.bidirectional_compute
     )
     if para.score_type_predictor == 'denselinear':
         loss_func = nn.NLLLoss()

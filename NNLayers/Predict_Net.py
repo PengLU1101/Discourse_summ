@@ -74,13 +74,14 @@ class Predic_Net(nn.Module):
             fp_lld = F.logsigmoid(self.cpt_logit(fwd_h, fwd_pos))
             fn_lld = F.logsigmoid(-self.cpt_logit(fwd_h, fwd_neg))
             if self.bidirectional:
-                2
-            pos_loss = torch.mean(fp_lld)
-            neg_loss = torch.mean(fn_lld)
-        loss = {'fwd_pos': fwd_pos, 'fwd_neg': fwd_neg}
-        if
+                bp_lld = F.logsigmoid(self.cpt_logit(bwd_h, bwd_pos))
+                bn_lld = F.logsigmoid(-self.cpt_logit(bwd_h, bwd_neg))
+        lld = {'fwd_pos': fp_lld, 'fwd_neg': fn_lld}
+        if self.bidirectional:
+            lld['bwd_pos'] = bp_lld
+            lld['bwd_neg'] = bn_lld
 
-        return (pos_loss, neg_loss)
+        return lld
 
     def cpt_logit(self, h: T, t: T) -> T:
         if self.score_type == 'bilinear':
