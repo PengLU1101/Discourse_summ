@@ -92,10 +92,14 @@ class Predic_Net(nn.Module):
             lld = lld.squeeze(-1) / self.norm_factor
         elif self.score_type == 'denselinear':
             h = h[:, None, :]
-            t = t[:, None, :],
-            lld = self.func(torch.cat(
-                h, t, h*t, torch.abs(h-t)
-            ))
+            t = t[:, None, :]
+            lld = self.func(torch.cat((
+                h,
+                t,
+                h*t,
+                torch.abs(h-t)),
+                dim = -1)
+            )
 
         return lld
 
