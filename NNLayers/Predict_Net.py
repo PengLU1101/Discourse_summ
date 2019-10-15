@@ -37,7 +37,7 @@ class Predic_Net(nn.Module):
                 rep_sents: List[T],
                 gate: List[Tuple[T, T]],
                 fwd_neg: T,
-                bwd_neg: T) -> Dict[str, T]:
+                bwd_neg: T) -> StateType:
         fwd: List[T] = list(map(
             self.get_sm, 
             rep_sents
@@ -145,9 +145,9 @@ class Predic_Net(nn.Module):
         :return: (N x N)
         """
         assert gate_tuple[0].size(0) + 1 == gate_tuple[0].size(1), \
-            f"The expected dim of gate is (n-1, n)"
+            "The expected dim of gate is (n-1, n)"
         assert gate_tuple[1].size(0) + 1 == gate_tuple[1].size(1), \
-            f"The expected dim of gate is (n-1, n)"
+            "The expected dim of gate is (n-1, n)"
 
         return (torch.triu(torch.cat((torch.ones(1, gate_tuple[0].size(1)).to(gate_tuple[0].device),
                                       gate_tuple[0]), 
@@ -160,7 +160,7 @@ class Predic_Net(nn.Module):
                )
     def init_para(self):
         if self.score_type == 'bilinear':
-            nn.init.xavier_normal_(
+            nn.init.xavier_uniform_(
                 self.func.weight
             )
             nn.init.zeros_(

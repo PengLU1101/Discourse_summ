@@ -13,7 +13,6 @@ import torch.nn.functional as F
 from torch import Tensor as T
 import numpy as np
 
-INF = 1e-9
 from NNLayers.Embeddings import Embedding_Net, WordEmbedding, PositionalEncoding
 from NNLayers.Gate_Net import Gate_Net, Score_Net
 from NNLayers.Predict_Net import Predic_Net
@@ -83,29 +82,28 @@ class LSTMEncoder(nn.Module):
         self.Dropout = nn.Dropout(dropout)
         self.bidirectional = bidirectional
 
-    def forward(self,
-                input: T,
-                mask: T,
-                lengths: List[int],
-                idx_list: Optional[List[List[int]]] = None) -> Union[List[T], T]:
-        input = input.permute(1, 0, 2)
-        packed_seq = pack(
-            input,
-            lengths,
-            enforce_sorted=False
-        )
-        out, h = self.rnn(self.Dropout(packed_seq))
-        if self.bidirectional:
-            h = torch.cat((h[-1][-1], h[-1][-2]), dim=-1)
-        else:
-            h = h[-1]
-        if idx_list:
-            h = [torch.index_select(h,
-                                      dim=0,
-                                      index=torch.LongTensor(idx).to(input.device)) for idx in idx_list]
+def forward(self,
+            input: T,
+            mask: T,
+            idx_list: Optional[List[List[int]]] = None,
+            lengths: List[int] = None) -> Union[List[T], T]:
+    input = self.wordemb(input).permute(1, 0, 2)
+    packed_seq = pack(
+        input,
+        lengths,
+        enforce_sorted=False
+    )
+    out, h = self.rnn(self.Dropout(packed_seq))
+    if self.bidirectional:
+        h = torch.cat((h[-1][-1], h[-1][-2]), dim=-1)
+    else:
+        h = h[-1]
+    if idx_list:
+        h = [torch.index_select(h,
+                                dim=0,
+                                index=torch.LongTensor(idx).to(input.device)) for idx in idx_list]
 
-        return h
-
+    return h
 
 class Parser(nn.Module):
     def __init__(self,
@@ -268,6 +266,8 @@ def build_model(para, weight):
             para.d_model,
             para.n_layer,
             para.dropout,
+            para.bidirectional
+
         )
 
     encoder.wordemb.apply_weights(weight)

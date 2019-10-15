@@ -66,7 +66,9 @@ class Score_Net(nn.Module):
         pass
 
 
-    def parsing_score(self, src: T, tgt: T):
+    def parsing_score(self,
+                      src: T,
+                      tgt: T):
         assert src.size(1) == tgt.size(1)
         pass
 
@@ -142,8 +144,7 @@ class Gate_Net(nn.Module):
             gate_list.append(self.compute_gate(score))
         return gate_list
 
-    def pad_score(self,
-                  score: T) -> T:
+    def pad_score(self, score: T) -> T:
         pad_score = torch.cat(
             [torch.zeros(score.size(0)).to(score.device), score],
             dim=0
@@ -166,8 +167,7 @@ class Gate_Net(nn.Module):
             )
         return gate
 
-    def compute_gate(self,
-                     score: T) -> Tuple[T, T]:
+    def compute_gate(self, score: T) -> Tuple[T, T]:
         #assert score.size()[0] > 4
         score = score[1: -1]
         fwd_gate = self.compute_prob(
@@ -182,8 +182,7 @@ class Gate_Net(nn.Module):
         bwd_gate = torch.cumprod(bwd_gate, dim=0)  # seq x seq - 1
         return (fwd_gate, bwd_gate)
 
-    def cpt_gate(self,
-                     semantic_score: T) -> Tuple[T, T]:
+    def cpt_gate(self, semantic_score: T) -> Tuple[T, T]:
         assert semantic_score.size()[0] > 4
         score = semantic_score[1 : -1] # (num_score - 2)
         fwd_score = torch.cat(

@@ -29,7 +29,8 @@ def parse_args(args=None):
     #parser.add_argument()
 
     parser.add_argument('--score_type_parser', default='bilinear', type=str)
-    parser.add_argument('--score_type_predictor', default='bilinear', type=str)
+    parser.add_argument('--score_type_predictor', default='denselinear', type=str)
+    parser.add_argument('--encoder_type', default='LSTM', type=str)
     parser.add_argument('-v', '--vocab_size', default=30000, type=int)
     parser.add_argument('-ed', '--emb_dim', default=128, type=int)
     parser.add_argument('-md', '--d_model', default=512, type=int)
@@ -39,6 +40,8 @@ def parse_args(args=None):
     parser.add_argument('--nhead', default=8, type=int)
     parser.add_argument('--dropout', default=0.0, type=float)
     parser.add_argument('--n_layer', default=3, type=int)
+    parser.add_argument('--bidirectional', default=True, type=bool)
+    parser.add_argument('--bidirectional_compute', default=False, type=bool)
     #parser.add_argument('--weight_path', default='')
 
     parser.add_argument('-r', '--regularization', default=1.0, type=float)
