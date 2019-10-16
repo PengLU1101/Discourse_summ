@@ -48,7 +48,8 @@ class TransformerEncoder(nn.Module):
     def forward(self,
                 src: T,
                 mask: T,
-                idx_list: Optional[List[List[int]]] = None) -> Union[List[T], T]:
+                idx_list: Optional[List[List[int]]] = None,
+                length: Optional[List[str]] = None) -> Union[List[T], T]:
         rep = self.positionemb(self.wordemb(src)).permute(1, 0, 2)
         if self.emb_dim != self.d_model:
             rep = self.prejector(rep)
@@ -82,28 +83,28 @@ class LSTMEncoder(nn.Module):
         self.Dropout = nn.Dropout(dropout)
         self.bidirectional = bidirectional
 
-def forward(self,
-            input: T,
-            mask: T,
-            idx_list: Optional[List[List[int]]] = None,
-            lengths: List[int] = None) -> Union[List[T], T]:
-    input = self.wordemb(input).permute(1, 0, 2)
-    packed_seq = pack(
-        input,
-        lengths,
-        enforce_sorted=False
-    )
-    out, h = self.rnn(self.Dropout(packed_seq))
-    if self.bidirectional:
-        h = torch.cat((h[-1][-1], h[-1][-2]), dim=-1)
-    else:
-        h = h[-1]
-    if idx_list:
-        h = [torch.index_select(h,
-                                dim=0,
-                                index=torch.LongTensor(idx).to(input.device)) for idx in idx_list]
+    def forward(self,
+                input: T,
+                mask: T,
+                idx_list: Optional[List[List[int]]] = None,
+                lengths: List[int] = None) -> Union[List[T], T]:
+        input = self.Dropout(self.wordemb(input).permute(1, 0, 2))
+        packed_seq = pack(
+            input,
+            lengths,
+            enforce_sorted=False
+        )
+        out, h = self.rnn(packed_seq)
+        if self.bidirectional:
+            h = torch.cat((h[-1][-1], h[-1][-2]), dim=-1)
+        else:
+            h = h[-1]
+        if idx_list:
+            h = [torch.index_select(h,
+                                    dim=0,
+                                    index=torch.LongTensor(idx).to(input.device)) for idx in idx_list]
 
-    return h
+        return h
 
 class Parser(nn.Module):
     def __init__(self,
@@ -150,11 +151,13 @@ class PEmodel(nn.Module):
                 rep_idx: List[List[int]],
                 score_idx: List[List[int]],
                 neg_input: Tuple[T, T],
-                neg_mask: Tuple[T, T]) -> Tuple[T, T]:
-        reps: List[T] = self.encoder(input, mask, rep_idx)
-        neg_fwd: T = self.encoder(neg_input[0], neg_mask[0])
-        neg_bwd: T = self.encoder(neg_input[1], neg_mask[1])
+                neg_mask: Tuple[T, T],
+                length_dict: Dict[str, List[int]]) -> Tuple[T, T]:
+        reps: List[T] = self.encoder(input, mask, rep_idx, length_dict['src'])
+        neg_fwd: T = self.encoder(neg_input[0], neg_mask[0], None, length_dict['nf'])
+        neg_bwd: T = self.encoder(neg_input[1], neg_mask[1], None, length_dict['nb'])
         gate_list: List[Tuple[T, T]] = self.parser(reps, rep_idx, score_idx)
+
         if self.predictor.score_type == 'denselinear':
             lld = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
             fwd_pos_label = torch.ones(
@@ -182,37 +185,44 @@ class PEmodel(nn.Module):
 
         else:
             lld = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
-            loss_pos = torch.mean(lld['fwd_pos'])
-            loss_neg = torch.mean(lld['fwd_neg'])
+            loss_pos = -torch.mean(lld['fwd_pos'])
+            loss_neg = -torch.mean(lld['fwd_neg'])
             if self.predictor.bidirectional:
-                loss_pos = (loss_pos + torch.mean(lld['bwd_pos'])) / 2
-                loss_neg = (loss_neg + torch.mean(lld['bwd_neg'])) / 2
-        return (loss_pos, loss_neg)
+                loss_pos = (loss_pos - torch.mean(lld['bwd_pos'])) / 2
+                loss_neg = (loss_neg - torch.mean(lld['bwd_neg'])) / 2
+        return (loss_pos, loss_neg, gate_list)
 
     @staticmethod
     def train_step(model,
                    optimizer,
                    data,
-                   args):
+                   args,
+                   istep):
         model.train()
         optimizer.zero_grad()
 
-        Tensor_dict, token_dict, idx_dict = data
+        Tensor_dict, token_dict, idx_dict, length_dict = data
 
-        pos_loss, neg_loss = model(
+        pos_loss, neg_loss, gate_list = model(
             Tensor_dict['src'].cuda(),
             Tensor_dict['mask_src'].cuda(),
             idx_dict['rep_idx'],
             idx_dict['score_idx'],
             (Tensor_dict['nf'].cuda(), Tensor_dict['nb'].cuda()),
             (Tensor_dict['mnf'].cuda(), Tensor_dict['mnb'].cuda()),
+            length_dict,
             #idx_dict['neg_idx']
         )
-        loss = -(pos_loss + neg_loss) / 2
+        loss = (pos_loss + neg_loss) / 2
         #loss = -pos_loss
         #loss = -neg_loss
         loss.backward()
         optimizer.step()
+
+        if istep == 1000:
+            for x in gate_list:
+                for y in x[0]:
+                    print(f"gate is: {y}")
 
         log = {
             #**regularization_log,
@@ -228,7 +238,7 @@ class PEmodel(nn.Module):
                   data,
                   args):
         model.eval()
-        Tensor_dict, token_dict, idx_dict = data
+        Tensor_dict, token_dict, idx_dict, length_dict = data
         pos_loss, neg_loss = model(
             Tensor_dict['src'].cuda(),
             Tensor_dict['mask_src'].cuda(),
@@ -260,10 +270,14 @@ def build_model(para, weight):
             para.dropout
         )
     elif para.encoder_type == 'LSTM':
+        if para.bidirectional:
+            d_model = para.d_model // 2
+        else:
+            d_model = para.d_model
         encoder = LSTMEncoder(
             para.word2id,
             para.emb_dim,
-            para.d_model,
+            d_model,
             para.n_layer,
             para.dropout,
             para.bidirectional
