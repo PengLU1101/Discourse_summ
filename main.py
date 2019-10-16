@@ -157,11 +157,11 @@ def main(args):
             start_time = time.time()
             #for istep, data in enumerate(train_loader):
             for istep, data in enumerate(BackgroundGenerator(train_loader)):
-                log = pe_model.train_step(pe_model, optimizer, data, args)
+                log = pe_model.train_step(pe_model, optimizer, data, args, istep)
                 training_logs.append(log)
 
                 if istep >= warm_up_steps:
-                    current_learning_rate = current_learning_rate / 10
+                    current_learning_rate = current_learning_rate / 2
                     logging.info(f'Change learning_rate to {current_learning_rate} at step {istep}')
                     optimizer = torch.optim.SGD(
                         filter(lambda p: p.requires_grad, pe_model.parameters()),
