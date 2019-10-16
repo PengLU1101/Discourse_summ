@@ -42,6 +42,9 @@ class Predic_Net(nn.Module):
             self.get_sm, 
             rep_sents
             )) #item h1 h2 h3 h4
+        ##################################be careful this
+        #fwd = [x[:-1, :] for x in rep_sents]
+        ##################################be careful this
         bwd: List[T] = list(map(
             self.get_sm, 
             [x.flip((0, )) for x in rep_sents]
