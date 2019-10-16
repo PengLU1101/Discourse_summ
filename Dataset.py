@@ -118,7 +118,7 @@ class CnnDmDataset(data.Dataset):
                 padded_tgt[i, :end] = torch.LongTensor(sent[:end])
                 mask_tgt[i, :end] = 1
 
-            return padded_src, padded_tgt, mask_src, mask_tgt
+            return padded_src, padded_tgt, mask_src, mask_tgt, src_lens, tgt_lens
 
         # def get_neglist(lens_list):
         #     neg = []
@@ -142,8 +142,8 @@ class CnnDmDataset(data.Dataset):
             negf_doc_list += [len(_['neg_idx_fwd'])]
             negb_doc_list += [len(_['neg_idx_bwd'])]
 
-        padded_src, padded_tgt, mask_src, mask_tgt = pad_mask(data, 'src_idx', 'tgt_idx')
-        padded_nf, padded_nb, mask_nf, mask_nb = pad_mask(data, 'neg_idx_fwd', 'neg_idx_bwd')
+        padded_src, padded_tgt, mask_src, mask_tgt, src_lens, tgt_lens = pad_mask(data, 'src_idx', 'tgt_idx')
+        padded_nf, padded_nb, mask_nf, mask_nb, nf_lens, nb_lens = pad_mask(data, 'neg_idx_fwd', 'neg_idx_bwd')
 
         Tensor_dict = {'src': padded_src,  # (B x num_src) x max_seq_src_len : num_ is not sure. so (B x num_) is changing
                        'tgt': padded_tgt,  # (B x num_tgt) x max_seq_tgt_len
@@ -170,7 +170,11 @@ class CnnDmDataset(data.Dataset):
                     #'nb_idx': nb_idxbylen
                     }
                     #'neg_idx': neg_idx}
-        return Tensor_dict, token_dict, idx_dict
+        length_dict = {'src': src_lens,
+                       'tgt': tgt_lens,
+                       'nf': nf_lens,
+                       'nb': nb_lens}
+        return Tensor_dict, token_dict, idx_dict, length_dict
 
 
 def test():
