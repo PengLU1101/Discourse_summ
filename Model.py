@@ -239,13 +239,14 @@ class PEmodel(nn.Module):
                   args):
         model.eval()
         Tensor_dict, token_dict, idx_dict, length_dict = data
-        pos_loss, neg_loss = model(
+        pos_loss, neg_loss, gate_list = model(
             Tensor_dict['src'].cuda(),
             Tensor_dict['mask_src'].cuda(),
             idx_dict['rep_idx'],
             idx_dict['score_idx'],
             (Tensor_dict['nf'].cuda(), Tensor_dict['nb'].cuda()),
             (Tensor_dict['mnf'].cuda(), Tensor_dict['mnb'].cuda()),
+            length_dict,
             #idx_dict['neg_idx']
         )
         loss = -(pos_loss + neg_loss) / 2
