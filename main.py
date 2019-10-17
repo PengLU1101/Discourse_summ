@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 import torch
 import numpy as np
-from prefetch_generator import BackgroundGenerator
+#from prefetch_generator import BackgroundGenerator
 from torch.utils.tensorboard import SummaryWriter
 
 import Model
@@ -155,8 +155,8 @@ def main(args):
             #pbar = #, total=len(train_loader))
             # train_iterator = iter(train_dataloader)
             start_time = time.time()
-            #for istep, data in enumerate(train_loader):
-            for istep, data in enumerate(BackgroundGenerator(train_loader)):
+            for istep, data in enumerate(train_loader):
+            #for istep, data in enumerate(BackgroundGenerator(train_loader)):
                 log = pe_model.train_step(pe_model, optimizer, data, args, istep)
                 training_logs.append(log)
 
