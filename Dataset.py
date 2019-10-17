@@ -65,11 +65,13 @@ class CnnDmDataset(data.Dataset):
         #         js_neg = json.loads(f.read())
         #     neg_list += random.sample(js_neg['article'], min(len(neg_list), len(js['article'])))
         # neg_list = list(map(self.convert2list, neg_list))
+        if len(src_list) > 20:
+            src_list = src_list[: 20]
 
         js['src_idx'] = src_list
         js['tgt_idx'] = tgt_list
-        js['neg_idx_fwd'] = neg_list[: (len(js['article']) - 1)]
-        js['neg_idx_bwd'] = neg_list[(len(js['article']) - 1):]
+        js['neg_idx_fwd'] = neg_list[: (len(src_list) - 1)]
+        js['neg_idx_bwd'] = neg_list[(len(src_list) - 1):]
 
         return js
 
