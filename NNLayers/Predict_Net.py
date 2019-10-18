@@ -119,11 +119,11 @@ class Predic_Net(nn.Module):
             doc_fwd = torch.sum(
                 square[0] * mask[i][0][:, :, None],
                 dim=0
-            ) * torch.sum(mask[i][0], dim=0)[:, None]  # h1, h2, h3, h4 (N x dim)
+            ) / torch.sum(mask[i][0], dim=0)[:, None]  # h1, h2, h3, h4 (N x dim)
             doc_bwd = torch.sum(
                 square[1] * mask[i][1][:, :, None],
                 dim=0
-            ) * torch.sum(mask[i][1], dim=0)[:, None]  # h3, h2, h1, h0
+            ) / torch.sum(mask[i][1], dim=0)[:, None]  # h3, h2, h1, h0
             fwd_list.append(doc_fwd)
             bwd_list.append(doc_bwd)
         return (fwd_list, bwd_list)
