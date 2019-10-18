@@ -37,7 +37,7 @@ class Predic_Net(nn.Module):
                 rep_sents: List[T],
                 gate: List[Tuple[T, T]],
                 fwd_neg: T,
-                bwd_neg: T) -> StateType:
+                bwd_neg: T) -> Tuple[StateType, List[Tuple[T, T]]]:
         fwd: List[T] = list(map(
             self.get_sm, 
             rep_sents
@@ -84,7 +84,7 @@ class Predic_Net(nn.Module):
             lld['bwd_pos'] = bp_lld
             lld['bwd_neg'] = bn_lld
 
-        return lld
+        return lld, mask
 
     def cpt_logit(self, h: T, t: T) -> T:
         if self.score_type == 'bilinear':
@@ -96,6 +96,8 @@ class Predic_Net(nn.Module):
         elif self.score_type == 'denselinear':
             h = h[:, None, :]
             t = t[:, None, :]
+            # print(h.size())
+            # print(t.size())
             lld = self.func(torch.cat((
                 h,
                 t,
