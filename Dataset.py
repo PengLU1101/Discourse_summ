@@ -51,28 +51,15 @@ class CnnDmDataset(data.Dataset):
         tgt_list = list(map(self.convert2list, js['summary']))
         neg_list = list(map(self.convert2list, js['neg']))
 
-        # neg_list = []
-        # for idx in range(2 * len(js['article']) - 2):
-        #     neg_idx = random.choice(list(chain(range(0, i), range(i, self._n_data))))
-        #     with open(os.path.join(self._data_path, f'{neg_idx}.json')) as f:
-        #         js_neg = json.loads(f.read())
-        #
-        #         neg_sent_idx = random.choice(range(len(js_neg['article'])))
-        #     neg_list.append(self.convert2list(js_neg['article'][neg_sent_idx]))
-        # while len(neg_list) < 2 * len(js['article']) - 2:
-        #     neg_idx = random.choice(list(chain(range(0, i), range(i, self._n_data))))
-        #     with open(os.path.join(self._data_path, f'{neg_idx}.json')) as f:
-        #         js_neg = json.loads(f.read())
-        #     neg_list += random.sample(js_neg['article'], min(len(neg_list), len(js['article'])))
-        # neg_list = list(map(self.convert2list, neg_list))
+        src_list = [self.convert2list(x) for x in js["article"]]
+
         if len(src_list) > 20:
             src_list = src_list[: 20]
 
         js['src_idx'] = src_list
         js['tgt_idx'] = tgt_list
         js['neg_idx_fwd'] = neg_list[: (len(src_list) - 1)]
-        js['neg_idx_bwd'] = neg_list[(len(src_list) - 1):]
-
+        js['neg_idx_bwd'] = neg_list[(len(src_list) - 1): 2 * (len(src_list) - 1)]
         return js
 
     def convert2list(self, s: str):
@@ -138,7 +125,9 @@ class CnnDmDataset(data.Dataset):
         tgt_doc_list: List[int] = []  # both of two list should have same length as batch size.
         negf_doc_list: List[int] = []
         negb_doc_list: List[int] = []
-        for _ in data:
+        # for x in data:
+        #     print(x['src_idx'][0])
+        for i, _ in enumerate(data):
             src_doc_list += [len(_['src_idx'])]
             tgt_doc_list += [len(_['tgt_idx'])]
             negf_doc_list += [len(_['neg_idx_fwd'])]
@@ -159,6 +148,7 @@ class CnnDmDataset(data.Dataset):
         token_dict = {'article': [_['article'] for _ in data],
                       'summary': [_['summary'] for _ in data]
                       }
+
         src_idxbylen = get_idx_by_lens(src_doc_list)
         score_idxbylen = get_idx_by_lens([x + 1 for x in src_doc_list])
         tgt_idxbylen = get_idx_by_lens(tgt_doc_list)
