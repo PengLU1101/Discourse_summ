@@ -39,6 +39,8 @@ def parse_args(args=None):
     parser.add_argument('--hard', default=True, type=str)
     parser.add_argument('--nhead', default=8, type=int)
     parser.add_argument('--dropout', default=0.0, type=float)
+    parser.add_argument('--L2', default=0.1, type=float)
+    parser.add_argument('--momentum', default=0.9, type=float)
     parser.add_argument('--n_layer', default=3, type=int)
     parser.add_argument('--bidirectional', default=True, type=bool)
     parser.add_argument('--bidirectional_compute', default=False, type=bool)
