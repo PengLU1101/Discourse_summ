@@ -152,14 +152,14 @@ class PEmodel(nn.Module):
                 score_idx: List[List[int]],
                 neg_input: Tuple[T, T],
                 neg_mask: Tuple[T, T],
-                length_dict: Dict[str, List[int]]) -> Tuple[T, T]:
+                length_dict: Dict[str, List[int]]) -> Tuple[T, T, List[Tuple[T, T]]]:
         reps: List[T] = self.encoder(input, mask, rep_idx, length_dict['src'])
         neg_fwd: T = self.encoder(neg_input[0], neg_mask[0], None, length_dict['nf'])
         neg_bwd: T = self.encoder(neg_input[1], neg_mask[1], None, length_dict['nb'])
         gate_list: List[Tuple[T, T]] = self.parser(reps, rep_idx, score_idx)
 
         if self.predictor.score_type == 'denselinear':
-            lld = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
+            lld, mask = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
             fwd_pos_label = torch.ones(
                 lld['fwd_pos'].size(0),
                 requires_grad=False
@@ -184,13 +184,13 @@ class PEmodel(nn.Module):
                 loss_neg = (loss_neg + self.loss_func(lld['bwd_neg'].squeeze(1), bwd_neg_label)) / 2
 
         else:
-            lld = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
+            lld, mask = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
             loss_pos = -torch.mean(lld['fwd_pos'])
             loss_neg = -torch.mean(lld['fwd_neg'])
             if self.predictor.bidirectional:
                 loss_pos = (loss_pos - torch.mean(lld['bwd_pos'])) / 2
                 loss_neg = (loss_neg - torch.mean(lld['bwd_neg'])) / 2
-        return (loss_pos, loss_neg, gate_list)
+        return (loss_pos, loss_neg, mask)
 
     @staticmethod
     def train_step(model,
@@ -221,8 +221,7 @@ class PEmodel(nn.Module):
 
         if istep == 1000:
             for x in gate_list:
-                for y in x[0]:
-                    print(f"gate is: {y}")
+                print(f"gate is: \n{x[0]}")
 
         log = {
             #**regularization_log,
