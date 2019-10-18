@@ -100,7 +100,9 @@ def main(args):
         current_learning_rate = args.learning_rate
         optimizer = torch.optim.SGD(
             filter(lambda p: p.requires_grad, pe_model.parameters()),
-            lr=current_learning_rate
+            lr=current_learning_rate,
+            weight_decay=args.L2,
+            momentum=args.momentum
         )
         if args.warm_up_steps:
             warm_up_steps = args.warm_up_steps
@@ -165,7 +167,9 @@ def main(args):
                     logging.info(f'Change learning_rate to {current_learning_rate} at step {istep}')
                     optimizer = torch.optim.SGD(
                         filter(lambda p: p.requires_grad, pe_model.parameters()),
-                        lr=current_learning_rate
+                        lr=current_learning_rate,
+                        weight_decay=args.L2,
+                        momentum=args.momentum
                     )
                     warm_up_steps = warm_up_steps * 2
 
