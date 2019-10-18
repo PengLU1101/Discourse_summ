@@ -249,7 +249,7 @@ class PEmodel(nn.Module):
             length_dict,
             #idx_dict['neg_idx']
         )
-        loss = -(pos_loss + neg_loss) / 2
+        loss = (pos_loss + neg_loss) / 2
 
         log = {
             #**regularization_log,
