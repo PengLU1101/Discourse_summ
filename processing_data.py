@@ -51,12 +51,20 @@ def make_json(path, split):
     src_path = os.path.join(path, split+'.txt.src')
     tgt_path = os.path.join(path, split+'.txt.tgt.tagged')
     with open(src_path, 'r') as fr, open(tgt_path, 'r') as ft:
-        slines = fr.readlines()
-        tlines = ft.readlines()
+        #slines = fr.readlines()
+        #tlines = ft.readlines()
         src_l, tgt_l = [], []
         too_long = []
         idx = 0
-        for x, y in tqdm(zip(slines, tlines)):
+        ########################3
+        # idx = 171244
+        # idx_end = 171553
+        # slines = slines[idx: idx_end+1]
+        # tlines = tlines[idx: idx_end+1]
+
+        ########################3
+        for x, y in tqdm(zip(fr.readlines(), ft.readlines())):
+            src_l, tgt_l = [], []
             if len(x) < 1:
                 continue
             _src = sent_tokenize(x)
@@ -77,9 +85,11 @@ def make_json(path, split):
                 else:
                     pass
             save_json_file = os.path.join(path, split + f'/{idx}.json')
+            with open(save_json_file, 'r') as f:
+                js = json.loads(f.read())
             if len(src_l) > 50:
                 src_l = src_l[:50]
-            json_file = {'article': src_l, 'summary': _tgt}
+            json_file = {'article': src_l, 'summary': _tgt, 'neg': js['neg']}
             with open(save_json_file, 'w+') as f:
                 json.dump(json_file, f)
             idx += 1
@@ -108,20 +118,20 @@ def add_neg(path, split, part=None, a=None, b=None):
         neg_list = []
         with open(os.path.join(jsonfile_dir, f'{i}.json')) as f:
             js = json.loads(f.read())
-            if 'neg' in js:
-                continue
-            else:
-                for idx in range(2 * len(js['article']) - 2):
-                    neg_idx = random.choice(list(chain(range(0, i), range(i, n_files))))
-                    with open(os.path.join(jsonfile_dir, f'{neg_idx}.json')) as f:
-                        js_neg = json.loads(f.read())
+        # if 'neg' in js:
+        #     pass
+        # else:
+        for idx in range(2 * len(js['article']) - 2):
+                neg_idx = random.choice(list(chain(range(0, i), range(i, n_files))))
+                with open(os.path.join(jsonfile_dir, f'{neg_idx}.json')) as f:
+                    js_neg = json.loads(f.read())
 
-                        neg_sent = random.choice(js_neg['article'])
-                    neg_list.append(neg_sent)
+                    neg_sent = random.choice(js_neg['article'])
+                neg_list.append(neg_sent)
 
-                js['neg'] = neg_list
-                with open(os.path.join(jsonfile_dir, f'{i}.json'), 'w+') as f:
-                    json.dump(js, f)
+        js['neg'] = neg_list
+        with open(os.path.join(jsonfile_dir, f'{i}.json'), 'w+') as f:
+            json.dump(js, f)
 
 
 def norm_line(line):
@@ -140,6 +150,40 @@ def norm_line(line):
         print(f'{i} is: \n {x}')
     return _
 
+def check_files(path, split):
+    jsonfile_dir = os.path.join(path, split)
+    # n_files = len(os.listdir(jsonfile_dir))
+    # _ = []
+    # for i in tqdm(range(n_files)):
+    #     #assert os.path.isfile(os.path.join(jsonfile_dir, f'{i}.json'))
+    #     try:
+    #         with open(os.path.join(jsonfile_dir, f'{i}.json')) as f:
+    #             js = json.loads(f.read())
+    #             assert js['article']
+    #             assert js['summary']
+    #             assert js['neg']
+    #     except:
+    #         if i not in _:
+    #             _.append(i)
+    #     if len(js['article']) < 8 and i not in _:
+    #         _.append(i)
+    #
+    #
+    # for i in _:
+    #     if os.path.isfile(os.path.join(jsonfile_dir, f'{i}.json')):
+    #         os.remove(os.path.join(jsonfile_dir, f'{i}.json'))
+    ll = os.listdir(jsonfile_dir)
+    n_files = len(ll)
+    sorted(ll, key=lambda x: x.split(".")[0])
+    for i, x in tqdm(enumerate(ll)):
+        with open(os.path.join(jsonfile_dir, x)) as f:
+            js = json.loads(f.read())
+
+        with open(os.path.join(jsonfile_dir, f'{i}.json'), 'w') as f:
+            json.dump(js, f)
+
+
+
 
 
 if __name__ == "__main__":
@@ -147,6 +191,7 @@ if __name__ == "__main__":
     path2 = "/data/rali5/Tmp/lupeng/data/new_cnndm"
     #make_json("/data/rali5/Tmp/lupeng/data/new_cnndm", 'val')
     #make_json("/data/rali5/Tmp/lupeng/data/new_cnndm", 'test')
+    #make_json("/data/rali5/Tmp/lupeng/data/new_cnndm", 'train')
     #fix_json(path, path2, 'train')
     #show_lens(path2, 'train')
     parser = argparse.ArgumentParser(
@@ -157,4 +202,5 @@ if __name__ == "__main__":
     parser.add_argument('--a', default=0, type=int)
     parser.add_argument('--b', default=0, type=int)
     args = parser.parse_args()
-    add_neg("/data/rali5/Tmp/lupeng/data/new_cnndm", 'train', a=args.a, b=args.b)
+    add_neg("/data/rali5/Tmp/lupeng/data/new_cnndm", 'train', args.part) #, a=args.a, b=args.b)
+    #check_files("/data/rali5/Tmp/lupeng/data/new_cnndm", 'train')
