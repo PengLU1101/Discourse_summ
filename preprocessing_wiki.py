@@ -4,10 +4,9 @@
 
 import json
 import os
-import pickle
-import re
 import random
 from itertools import chain
+import argparse
 
 from nltk.tokenize import sent_tokenize, word_tokenize
 from tqdm import tqdm
@@ -32,6 +31,7 @@ def make_json(path_data, split):
                 with open(json_file, 'w+') as fw:
                     json.dump(new_data, fw)
                 save_id += 1
+    print('end')
 
 def add_neg(path, split, part=None, a=None, b=None):
     jsonfile_dir = os.path.join(path, split)
@@ -47,6 +47,7 @@ def add_neg(path, split, part=None, a=None, b=None):
     else:
         start = 0
         end = n_files
+    print(f'start add neg example for {split} files ...')
     for i in tqdm(range(start, end)):
         neg_list = []
         with open(os.path.join(jsonfile_dir, f'{i}.json')) as f:
@@ -69,6 +70,14 @@ def test():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='data processing',
+        usage='train.py [<args>] [-h | --help]'
+    )
+    parser.add_argument('--part', default=0, type=int)
+    parser.add_argument('--a', default=0, type=int)
+    parser.add_argument('--b', default=0, type=int)
+    args = parser.parse_args()
     path = '/u/lupeng/Project/dataset/wikitext-103'
     #make_json(path, 'train')
-    add(path, 'train')
+    add_neg(path, 'train', part=args.part)
