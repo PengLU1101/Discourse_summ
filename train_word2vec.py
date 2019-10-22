@@ -11,9 +11,15 @@ from time import time
 from collections import Counter
 from datetime import timedelta
 import re
+from tqdm import tqdm
 
 import gensim
 
+
+try:
+    DATA_DIR = os.environ['DATA']
+except KeyError:
+    print('please use environment variable to specify data directories')
 
 def count_data(path):
     """ count number of data in the given path"""
@@ -21,12 +27,7 @@ def count_data(path):
     match = lambda name: bool(matcher.match(name))
     names = os.listdir(path)
     n_data = len(list(filter(match, names)))
-
-
-try:
-    DATA_DIR = os.environ['DATA']
-except KeyError:
-    print('please use environment variable to specify data directories')
+    return n_data
 
 class Sentences(object):
     """ needed for gensim word2vec training"""
@@ -45,7 +46,8 @@ def get_vocab():
     folder = os.path.join(DATA_DIR, 'train')
     n_data = count_data(folder)
     vocab_counter = Counter()
-    for i in range(n_data):
+    print('start build vocab files...')
+    for i in tqdm(range(n_data)):
         with open(os.path.join(folder, f'{i}.json')) as f:
             js = json.loads(f.read())
         tokens = ' '.join(js['src']).split()
@@ -90,7 +92,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='train word2vec embedding used for model initialization'
     )
-    parser.add_argument('--path', required=True, help='root of the model')
+    parser.add_argument('--path', default='/u/lupeng/Project/code/Discourse_summ/word2vec', help='root of the model')
     parser.add_argument('--dim', action='store', type=int, default=128)
     args = parser.parse_args()
 
