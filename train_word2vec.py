@@ -4,15 +4,23 @@
 
 """ pretrain a word2vec on the corpus"""
 import argparse
-import json
+import json, pickle
 import logging
 import os
 from time import time
+from collections import Counter
 from datetime import timedelta
+import re
 
 import gensim
 
-from utils import count_data
+
+def count_data(path):
+    """ count number of data in the given path"""
+    matcher = re.compile(r'[0-9]+\.json')
+    match = lambda name: bool(matcher.match(name))
+    names = os.listdir(path)
+    n_data = len(list(filter(match, names)))
 
 
 try:
@@ -33,6 +41,24 @@ class Sentences(object):
             for s in data['src']:
                 yield ['<s>'] + s.lower().split() + [r'<\s>']
 
+def get_vocab():
+    folder = os.path.join(DATA_DIR, 'train')
+    n_data = count_data(folder)
+    vocab_counter = Counter()
+    for i in range(n_data):
+        with open(os.path.join(folder, f'{i}.json')) as f:
+            js = json.loads(f.read())
+        tokens = ' '.join(js['src']).split()
+        tokens = [t.strip() for t in tokens]  # strip
+        tokens = [t for t in tokens if t != ""]  # remove empty
+        vocab_counter.update(tokens)
+
+    print("Writing vocab file...")
+    with open(os.path.join(DATA_DIR, "vocab_cnt.pkl"),
+              'wb') as vocab_file:
+        pickle.dump(vocab_counter, vocab_file)
+    print("Finished writing vocab file")
+
 
 def main(args):
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -41,7 +67,7 @@ def main(args):
     save_dir = args.path
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-
+    get_vocab()
     sentences = Sentences()
     model = gensim.models.Word2Vec(
         size=args.dim, min_count=5, workers=16, sg=1)
