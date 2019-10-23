@@ -36,7 +36,7 @@ class CnnDmDataset(data.Dataset):
                  split: str,
                  path: str,
                  word2id: Dict[str, int]) -> None:
-        assert split in ['train', 'val', 'test']
+        assert split in ['train', 'valid', 'test']
         self._data_path = os.path.join(path, split)
         self._n_data = self._count_data(self._data_path)# // 50
         self.word2id = defaultdict(lambda: word2id['<unk>'], word2id)
@@ -85,29 +85,19 @@ class CnnDmDataset(data.Dataset):
                 start = idx_list[-1][-1] + 1
             return idx_list
 
-        def pad_mask(data, name1, name2):
-            chain_src = list(chain.from_iterable([_[name1] for _ in data]))
-            chain_tgt = list(chain.from_iterable([_[name2] for _ in data]))
+        def pad_mask(data, name):
+            chain_src = list(chain.from_iterable([_[name] for _ in data]))
             src_lens = [len(_) for _ in chain_src]
-            tgt_lens = [len(_) for _ in chain_tgt]
             max_src_lens = max(src_lens)
-            max_tgt_lens = max(tgt_lens)
 
             padded_src = torch.zeros(len(chain_src), max_src_lens).long()
-            padded_tgt = torch.zeros(len(chain_tgt), max_tgt_lens).long()
             mask_src = torch.zeros(len(chain_src), max_src_lens).long()
-            mask_tgt = torch.zeros(len(chain_tgt), max_tgt_lens).long()
 
             for i, sent in enumerate(chain_src):
                 end = src_lens[i]
                 padded_src[i, :end] = torch.LongTensor(sent[:end])
-                mask_src[i, :end] = 1
-            for i, sent in enumerate(chain_tgt):
-                end = tgt_lens[i]
-                padded_tgt[i, :end] = torch.LongTensor(sent[:end])
-                mask_tgt[i, :end] = 1
 
-            return padded_src, padded_tgt, mask_src, mask_tgt, src_lens, tgt_lens
+            return padded_src, mask_src, src_lens
 
         # def get_neglist(lens_list):
         #     neg = []
@@ -133,8 +123,10 @@ class CnnDmDataset(data.Dataset):
             negf_doc_list += [len(_['neg_idx_fwd'])]
             negb_doc_list += [len(_['neg_idx_bwd'])]
 
-        padded_src, padded_tgt, mask_src, mask_tgt, src_lens, tgt_lens = pad_mask(data, 'src_idx', 'tgt_idx')
-        padded_nf, padded_nb, mask_nf, mask_nb, nf_lens, nb_lens = pad_mask(data, 'neg_idx_fwd', 'neg_idx_bwd')
+        padded_src, mask_src, src_lens = pad_mask(data, 'src_idx')
+        padded_tgt, mask_tgt, tgt_lens = pad_mask(data, 'tgt_idx')
+        padded_nf, mask_nf, nf_lens = pad_mask(data, 'neg_idx_fwd')
+        padded_nb, mask_nb, nb_lens = pad_mask(data, 'neg_idx_bwd')
 
         Tensor_dict = {'src': padded_src,  # (B x num_src) x max_seq_src_len : num_ is not sure. so (B x num_) is changing
                        'tgt': padded_tgt,  # (B x num_tgt) x max_seq_tgt_len
