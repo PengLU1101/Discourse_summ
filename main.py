@@ -18,6 +18,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import Model
 from Dataset import CnnDmDataset, make_vocab
+from BookDataset import WikiTextDataset
 from Parser import *
 
 # try:
@@ -63,12 +64,12 @@ def main(args):
     wb = read_pkl(os.path.join(args.data_path, 'vocab_cnt.pkl'))
     word2id = make_vocab(wb, args.vocab_size)
     args.word2id = len(word2id)
-    name2data = {'cnndm': CnnDmDataset, 'book': None} #BookDataset}
+    name2data = {'cnndm': CnnDmDataset, 'book': None, 'wiki': WikiTextDataset} #BookDataset}
     if args.dataset not in name2data:
-        raise ValueError('You should use dataset <cnndm> or <book>')
+        raise ValueError('You should use dataset <cnndm>, <wiki> or <book>')
 
     train_dataset = name2data[args.dataset]('train', args.data_path, word2id)
-    val_dataset = name2data[args.dataset]('val', args.data_path, word2id)
+    val_dataset = name2data[args.dataset]('valid', args.data_path, word2id)
     test_dataset = name2data[args.dataset]('test', args.data_path, word2id)
 
 
