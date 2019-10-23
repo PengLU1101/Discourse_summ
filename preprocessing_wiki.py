@@ -65,9 +65,52 @@ def add_neg(path, split, part=None, a=None, b=None):
         with open(os.path.join(jsonfile_dir, f'{i}.json'), 'w+') as f:
             json.dump(js, f)
 
-def test():
-    pass
 
+def check_files(path, split):
+    jsonfile_dir = os.path.join(path, split)
+    n_files = len(os.listdir(jsonfile_dir))
+    _ = []
+    for i in tqdm(range(n_files)):
+        #assert os.path.isfile(os.path.join(jsonfile_dir, f'{i}.json'))
+        try:
+            with open(os.path.join(jsonfile_dir, f'{i}.json')) as f:
+                js = json.loads(f.read())
+                assert js['src']
+                assert js['neg']
+        except:
+            if i not in _:
+                _.append(i)
+
+    #print(_)
+    for i in tqdm(_):
+        neg_list = []
+        with open(os.path.join(jsonfile_dir, f'{i}.json')) as f:
+            js = json.loads(f.read())
+
+        for idx in range(2 * len(js['src']) - 2):
+                neg_idx = random.choice(list(chain(range(0, i), range(i, n_files))))
+                with open(os.path.join(jsonfile_dir, f'{neg_idx}.json')) as f:
+                    js_neg = json.loads(f.read())
+
+                    neg_sent = random.choice(js_neg['src'])
+                neg_list.append(neg_sent)
+
+        js['neg'] = neg_list
+        with open(os.path.join(jsonfile_dir, f'{i}.json'), 'w+') as f:
+            json.dump(js, f)
+    #
+    # for i in _:
+    #     if os.path.isfile(os.path.join(jsonfile_dir, f'{i}.json')):
+    #         os.remove(os.path.join(jsonfile_dir, f'{i}.json'))
+    # ll = os.listdir(jsonfile_dir)
+    # n_files = len(ll)
+    # sorted(ll, key=lambda x: x.split(".")[0])
+    # for i, x in tqdm(enumerate(ll)):
+    #     with open(os.path.join(jsonfile_dir, x)) as f:
+    #         js = json.loads(f.read())
+    #
+    #     with open(os.path.join(jsonfile_dir, f'{i}.json'), 'w') as f:
+    #         json.dump(js, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -80,4 +123,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     path = '/u/lupeng/Project/dataset/wikitext-103'
     #make_json(path, 'train')
-    add_neg(path, 'train', part=args.part)
+    #add_neg(path, 'train', part=args.part)
+    check_files(path, 'train')
