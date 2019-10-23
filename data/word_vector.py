@@ -25,10 +25,10 @@ def make_vocab(wc, vocab_size):
     return word2id
 
 
-def get_word2vec(path):
-    finished_file_dir = os.path.join(path, 'finished_files')
-    wb = read_pkl(os.path.join(finished_file_dir, 'vocab_cnt.pkl'))
-    w2v_file_dir = os.path.join(path, 'word2vec/word2vec.128d.226k.w2v')
+def get_word2vec(data_path, wordvec_path):
+    file_dir = os.path.join(wordvec_path, 'word2vec')
+    wb = read_pkl(os.path.join(data_path, 'vocab_cnt.pkl'))
+    w2v_file_dir = os.path.join(file_dir, 'word2vec.128d.121k.w2v')
 
     word2id = make_vocab(wb, 30000)
     with open(w2v_file_dir, 'r') as f:
@@ -39,7 +39,7 @@ def get_word2vec(path):
         key, v = line.split(' ')[0], [float(x) for x in line.split(' ')[1:]]
         if key in word2id:
             weight[word2id[key], :] = v
-    path_save = os.path.join(path, 'word2vec/weight.npy')
+    path_save = os.path.join(file_dir, 'weight.npy')
     np.save(path_save, weight)
     # with open(path_save, 'wb+') as f:
     #     #pickle.dump(weight, f)
@@ -48,10 +48,11 @@ def get_word2vec(path):
 
 
 def test():
-    path = '/data/rali5/Tmp/lupeng/data/cnn-dailymail'
-    get_word2vec(path)
+    path = '/u/lupeng/Project/dataset/wikitext-103'
+    path2 = '/u/lupeng/Project/code/Discourse_summ'
+    get_word2vec(path, path2)
     #with open(, 'r') as f:
-    weight = np.load(os.path.join(path, 'word2vec/weight.npy'))
+    weight = np.load(os.path.join(path2, 'word2vec/weight.npy'))
     print(type(weight))
 
 if __name__ == "__main__":
