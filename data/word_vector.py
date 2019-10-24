@@ -20,8 +20,12 @@ def make_vocab(wc, vocab_size):
     word2id['<unk>'] = 1
     word2id['<start>'] = 2
     word2id['<end>'] = 3
+
     for i, (w, _) in enumerate(wc.most_common(vocab_size), 4):
-        word2id[w] = i
+        if w not in word2id:
+            word2id[w] = i
+        else:
+            print(f'fk is {w}')
     return word2id
 
 
@@ -34,7 +38,7 @@ def get_word2vec(data_path, wordvec_path):
     with open(w2v_file_dir, 'r') as f:
         lines = f.readlines()
     assert len(word2id) < int(lines[0].split(' ')[0])
-    weight = np.zeros((len(word2id), int(lines[0].split(' ')[1])))
+    weight = np.zeros((len(word2id)+1, int(lines[0].split(' ')[1])))
     for line in tqdm(lines[1:]):
         key, v = line.split(' ')[0], [float(x) for x in line.split(' ')[1:]]
         if key in word2id:
