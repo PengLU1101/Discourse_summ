@@ -63,7 +63,7 @@ def main(args):
     finished_file_dir = os.path.join(args.data_path, 'finished_files')
     wb = read_pkl(os.path.join(args.data_path, 'vocab_cnt.pkl'))
     word2id = make_vocab(wb, args.vocab_size)
-    args.word2id = len(word2id)
+    args.word2id = len(word2id) + 1
     name2data = {'cnndm': CnnDmDataset, 'book': None, 'wiki': WikiTextDataset} #BookDataset}
     if args.dataset not in name2data:
         raise ValueError('You should use dataset <cnndm>, <wiki> or <book>')
