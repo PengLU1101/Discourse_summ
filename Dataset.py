@@ -27,8 +27,12 @@ def make_vocab(wc, vocab_size):
     word2id['<unk>'] = 1
     word2id['<start>'] = 2
     word2id['<end>'] = 3
+
     for i, (w, _) in enumerate(wc.most_common(vocab_size), 4):
-        word2id[w] = i
+        if w not in word2id:
+            word2id[w] = i
+        else:
+            print(f'fk is {w}')
     return word2id
 
 class CnnDmDataset(data.Dataset):
