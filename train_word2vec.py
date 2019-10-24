@@ -37,7 +37,7 @@ class Sentences(object):
 
     def __iter__(self):
         for i in range(self._n_data):
-            with open(os.path.join(self._path, f'{i}.json') as f:
+            with open(os.path.join(self._path, f'{i}.json')) as f:
                 data = json.loads(f.read())
             for s in data['src']:
                 yield ['<s>'] + s.lower().split() + [r'<\s>']
@@ -51,7 +51,7 @@ def get_vocab():
         with open(os.path.join(folder, f'{i}.json')) as f:
             js = json.loads(f.read())
         tokens = ' '.join(js['src']).split()
-        tokens = [t.strip() for t in tokens]  # strip
+        tokens = [t.strip().lower() for t in tokens]  # strip
         tokens = [t for t in tokens if t != ""]  # remove empty
         vocab_counter.update(tokens)
 
@@ -69,7 +69,7 @@ def main(args):
     save_dir = args.path
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    #get_vocab()
+    get_vocab()
     sentences = Sentences()
     model = gensim.models.Word2Vec(
         size=args.dim, min_count=5, workers=16, sg=1)
@@ -80,12 +80,12 @@ def main(args):
 
     model.save(os.path.join(
         save_dir,
-        f'word2vec.{args.dim}d.{len(model.wv.vocab)//1000)}k.bin'
+        f"word2vec.{args.dim}d.{len(model.wv.vocab)//1000}k.bin")
     )
     model.wv.save_word2vec_format(os.path.join(
         save_dir,
-        f'word2vec.{args.dim}d.{len(model.wv.vocab)//1000}k.w2v'
-    ))
+        f'word2vec.{args.dim}d.{len(model.wv.vocab)//1000}k.w2v')
+    )
 
     print(f'word2vec trained in {timedelta(seconds=time()-start)}')
 
