@@ -34,14 +34,16 @@ class WikiTextDataset(data.Dataset):
 
         if len(src_list) > 20:
             src_list = src_list[: 20]
-
         js['src_idx'] = src_list
         js['neg_idx_fwd'] = neg_list[: (len(src_list) - 1)]
         js['neg_idx_bwd'] = neg_list[(len(src_list) - 1): 2 * (len(src_list) - 1)]
         return js
 
     def convert2list(self, s: str):
-        return [self.word2id[w] for w in ['<start>'] + s.lower().split() + ['<end>']]
+        strings = s.lower().split()
+        if len(strings) > 50:
+            strings = strings[: 50]
+        return [self.word2id[w] for w in ['<start>'] + strings + ['<end>']]
 
     @staticmethod
     def _count_data(path):
