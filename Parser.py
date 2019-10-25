@@ -53,8 +53,8 @@ def parse_args(args=None):
     parser.add_argument('-lr', '--learning_rate', default=0.01, type=float)
     parser.add_argument('-cpu', '--cpu_num', default=10, type=int)
     parser.add_argument('-init', '--init_checkpoint', default=None, type=str)
-    parser.add_argument('--max_steps', default=300, type=int)
-    parser.add_argument('--warm_up_steps', default=1000, type=int)
+    parser.add_argument('--max_steps', default=300000, type=int)
+    parser.add_argument('--warm_up_steps', default=3000, type=int)
 
     parser.add_argument('--save_checkpoint_steps', default=10000, type=int)
     parser.add_argument('--valid_steps', default=10000, type=int)
