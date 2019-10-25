@@ -112,12 +112,17 @@ def main(args):
             weight_decay=args.L2,
             #momentum=args.momentum
         )
+        if args.max_steps > 0:
+            t_total = args.max_steps
+            args.num_train_epochs = args.max_steps // (len(train_loader) // args.gradient_accumulation_steps) + 1
+        else:
+            t_total = len(train_loader) // args.gradient_accumulation_steps * args.num_train_epochs
         
         if args.warm_up_steps:
             warm_up_steps = args.warm_up_steps
         else:
-            warm_up_steps = args.max_steps // 2
-        scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
+            warm_up_steps = args.max_steps // 10
+        scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warm_up_steps, t_total=t_total)
     if args.do_valid:
         valid_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                                    batch_size=args.test_batch_size,

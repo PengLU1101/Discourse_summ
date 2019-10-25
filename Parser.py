@@ -28,7 +28,10 @@ def parse_args(args=None):
     parser.add_argument('--dataset', type=str, default='wiki', help='cnndm or book')
     parser.add_argument('-save', '--save_path', default='/u/lupeng/Project/code/Discourse_summ/saved', type=str)
     #parser.add_argument()
-
+    parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
+                        help="Number of updates steps to accumulate before performing a backward/update pass.")
+    parser.add_argument("--num_train_epochs", default=10, type=float,
+                        help="Total number of training epochs to perform.")
     parser.add_argument('--score_type_parser', default='dot', type=str)
     parser.add_argument('--score_type_predictor', default='denselinear', type=str)
     parser.add_argument('--encoder_type', default='transformer', type=str)
