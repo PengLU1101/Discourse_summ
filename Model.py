@@ -195,6 +195,7 @@ class PEmodel(nn.Module):
     @staticmethod
     def train_step(model,
                    optimizer,
+                   scheduler,
                    data,
                    args,
                    istep):
@@ -214,11 +215,9 @@ class PEmodel(nn.Module):
             #idx_dict['neg_idx']
         )
         loss = (pos_loss + neg_loss) / 2
-        #loss = -pos_loss
-        #loss = -neg_loss
         loss.backward()
         optimizer.step()
-
+        scheduler.step()
         if istep == 1000:
             for x in gate_list:
                 print(f"gate is: \n{x[0]}")
