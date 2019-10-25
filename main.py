@@ -152,59 +152,63 @@ def main(args):
         training_logs = []
         writer = SummaryWriter()
         # Training Loop
-        #train_iter = iter(train_loader)
+        train_iter = iter(train_loader)
         for step in range(init_step, args.max_steps):
             #for i in range(len(train_iterator)):
             #pbar = #, total=len(train_loader))
             # train_iterator = iter(train_dataloader)
             start_time = time.time()
-            for istep, data in enumerate(train_loader):
+            #for istep, data in enumerate(train_loader):
+            try:
+                data = next(train_iter)
+            except:
+                train_iter = iter(train_loader)
+                data = next(train_iter)
             #for istep, data in enumerate(BackgroundGenerator(train_loader)):
-                log = pe_model.train_step(pe_model, optimizer, data, args, istep)
-                training_logs.append(log)
+            log = pe_model.train_step(pe_model, optimizer, data, args, istep)
+            training_logs.append(log)
 
-                if istep >= warm_up_steps:
-                    current_learning_rate = current_learning_rate / 2
-                    logging.info(f'Change learning_rate to {current_learning_rate} at step {istep}')
-                    optimizer = torch.optim.SGD(
-                        filter(lambda p: p.requires_grad, pe_model.parameters()),
-                        lr=current_learning_rate,
-                        weight_decay=args.L2,
-                        momentum=args.momentum
-                    )
-                    warm_up_steps = warm_up_steps * 2
+            # if istep >= warm_up_steps:
+            #     current_learning_rate = current_learning_rate / 2
+            #     logging.info(f'Change learning_rate to {current_learning_rate} at step {istep}')
+            #     optimizer = torch.optim.SGD(
+            #         filter(lambda p: p.requires_grad, pe_model.parameters()),
+            #         lr=current_learning_rate,
+            #         weight_decay=args.L2,
+            #         momentum=args.momentum
+            #     )
+            #     warm_up_steps = warm_up_steps * 2
 
-                if istep % args.save_checkpoint_steps == 0:
-                    save_variable_list = {
-                        'step': istep,
-                        'current_learning_rate': current_learning_rate,
-                        'warm_up_steps': warm_up_steps
-                    }
-                    save_model(pe_model, optimizer, save_variable_list, args)
+            if istep % args.save_checkpoint_steps == 0:
+                save_variable_list = {
+                    'step': istep,
+                    'current_learning_rate': current_learning_rate,
+                    'warm_up_steps': warm_up_steps
+                }
+                save_model(pe_model, optimizer, save_variable_list, args)
 
-                if istep % args.log_steps == 0:
-                    metrics = {}
-                    for metric in training_logs[0].keys():
-                        metrics[metric] = sum([log[metric] for log in training_logs]) / len(training_logs)
-                    log_metrics('Training average', istep, metrics)
-                    training_logs = []
-                    for metric in metrics:
-                        writer.add_scalar("train/"+metric, metrics[metric], istep)
-                    writer.add_scalar('learning_rate', current_learning_rate, istep)
+            if istep % args.log_steps == 0:
+                metrics = {}
+                for metric in training_logs[0].keys():
+                    metrics[metric] = sum([log[metric] for log in training_logs]) / len(training_logs)
+                log_metrics('Training average', istep, metrics)
+                training_logs = []
+                for metric in metrics:
+                    writer.add_scalar("train/" + metric, metrics[metric], istep)
+                writer.add_scalar('learning_rate', current_learning_rate, istep)
 
-
-                if args.do_valid and istep % args.valid_steps == 0:
-                    val_logs = []
-                    logging.info('Evaluating on Valid Dataset...')
-                    for data in valid_loader:
-                        log = pe_model.test_step(pe_model, data, args)
-                        val_logs.append(log)
-                    metrics = {}
-                    for metric in val_logs[0].keys():
-                        metrics[metric] = sum([log[metric] for log in val_logs]) / len(val_logs)
-                    log_metrics('Valid average', istep, metrics)
-                    for metric in metrics:
-                        writer.add_scalar("Valid/"+metric, metrics[metric], istep)
+            if args.do_valid and istep % args.valid_steps == 0:
+                val_logs = []
+                logging.info('Evaluating on Valid Dataset...')
+                for data in valid_loader:
+                    log = pe_model.test_step(pe_model, data, args)
+                    val_logs.append(log)
+                metrics = {}
+                for metric in val_logs[0].keys():
+                    metrics[metric] = sum([log[metric] for log in val_logs]) / len(val_logs)
+                log_metrics('Valid average', istep, metrics)
+                for metric in metrics:
+                    writer.add_scalar("Valid/" + metric, metrics[metric], istep)
 
         save_variable_list = {
             'step': step,
