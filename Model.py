@@ -216,6 +216,7 @@ class PEmodel(nn.Module):
         )
         loss = (pos_loss + neg_loss) / 2
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
         optimizer.step()
         scheduler.step()
         if istep == 1000:
