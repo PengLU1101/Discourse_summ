@@ -22,6 +22,7 @@ def parse_args(args=None):
     parser.add_argument('--do_test', action='store_true')
     parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
     parser.add_argument('--model', type=str, default='PE_Model')
+    parser.add_argument('--machine', type=str, default='octal19')
 
     #parser.add_argument('--data_path', type=str, default='/data/rali5/Tmp/lupeng/data/new_cnndm')
     parser.add_argument('--data_path', type=str, default='/u/lupeng/Project/dataset/wikitext-103')
@@ -32,6 +33,8 @@ def parse_args(args=None):
                         help="Number of updates steps to accumulate before performing a backward/update pass.")
     parser.add_argument("--num_train_epochs", default=10, type=float,
                         help="Total number of training epochs to perform.")
+    parser.add_argument("--max_grad_norm", default=1.0, type=float,
+                        help="Max gradient norm.")
     parser.add_argument('--score_type_parser', default='dot', type=str)
     parser.add_argument('--score_type_predictor', default='denselinear', type=str)
     parser.add_argument('--encoder_type', default='transformer', type=str)
@@ -89,14 +92,17 @@ def save_model(model, optimizer, save_variable_list, args):
 
     argparse_dict = vars(args)
     print(argparse_dict)
-    with open(os.path.join(args.save_path, 'config.json'), 'w') as fjson:
+    save_path = os.path.join(args.save_path, args.machine)
+    if not os.path.isdir(save_path):
+        os.mkdir(save_path)
+    with open(os.path.join(save_path, 'config.json'), 'w') as fjson:
         json.dump(argparse_dict, fjson)
 
     torch.save({
         **save_variable_list,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict()},
-        os.path.join(args.save_path, 'checkpoint')
+        os.path.join(save_path, 'checkpoint')
     )
 
 
