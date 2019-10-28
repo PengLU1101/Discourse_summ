@@ -219,9 +219,9 @@ class PEmodel(nn.Module):
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
         optimizer.step()
         scheduler.step()
-        if istep == 1000:
-            for x in gate_list:
-                print(f"gate is: \n{x[0]}")
+        # if istep == 1000:
+        #     for x in gate_list:
+        #         print(f"gate is: \n{x[0]}")
 
         log = {
             #**regularization_log,
