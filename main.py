@@ -164,7 +164,7 @@ def main(args):
 
     if args.do_train:
         training_logs = []
-        writer = SummaryWriter()
+        writer = SummaryWriter(os.path.join(args.save_path, args.machine))
         # Training Loop
         train_iter = iter(train_loader)
         for step in range(init_step, args.max_steps):
@@ -209,6 +209,7 @@ def main(args):
                 training_logs = []
                 for metric in metrics:
                     writer.add_scalar("train/" + metric, metrics[metric], step)
+                current_learning_rate = get_lr(optimizer)
                 writer.add_scalar('learning_rate', current_learning_rate, step)
 
             if args.do_valid and step % args.valid_steps == 0:
