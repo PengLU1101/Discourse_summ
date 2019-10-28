@@ -33,7 +33,7 @@ def parse_args(args=None):
                         help="Number of updates steps to accumulate before performing a backward/update pass.")
     parser.add_argument("--num_train_epochs", default=10, type=float,
                         help="Total number of training epochs to perform.")
-    parser.add_argument("--max_grad_norm", default=1.0, type=float,
+    parser.add_argument("--max_grad_norm", default=10, type=float,
                         help="Max gradient norm.")
     parser.add_argument('--score_type_parser', default='dot', type=str)
     parser.add_argument('--score_type_predictor', default='denselinear', type=str)
@@ -59,7 +59,7 @@ def parse_args(args=None):
     parser.add_argument('-lr', '--learning_rate', default=0.01, type=float)
     parser.add_argument('-cpu', '--cpu_num', default=10, type=int)
     parser.add_argument('-init', '--init_checkpoint', default=None, type=str)
-    parser.add_argument('--max_steps', default=300000, type=int)
+    parser.add_argument('--max_steps', default=3000000, type=int)
     parser.add_argument('--warm_up_steps', default=3000, type=int)
 
     parser.add_argument('--save_checkpoint_steps', default=10000, type=int)
@@ -110,11 +110,15 @@ def set_logger(args):
     '''
     Write logs to checkpoint and console
     '''
+    if not args.init_checkpoint:
+        save_path = os.path.join(args.save_path, args.machine)
+    else:
+        save_path = os.path.join(args.init_checkpoint, args.machine)
 
     if args.do_train:
-        log_file = os.path.join(args.save_path or args.init_checkpoint, 'train.log')
+        log_file = os.path.join(save_path, 'train.log')
     else:
-        log_file = os.path.join(args.save_path or args.init_checkpoint, 'test.log')
+        log_file = os.path.join(save_path, 'test.log')
 
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s %(message)s',
@@ -142,3 +146,7 @@ def read_pkl(path):
     with open(path, "rb") as f:
         data_dict = pickle.load(f)
     return data_dict
+
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
