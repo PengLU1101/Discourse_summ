@@ -20,7 +20,7 @@ class WikiTextDataset(data.Dataset):
                  word2id: Dict[str, int]) -> None:
         assert split in ['train', 'valid', 'test']
         self._data_path = os.path.join(path, split)
-        self._n_data = self._count_data(self._data_path) #// 100
+        self._n_data = self._count_data(self._data_path)
         self.word2id = defaultdict(lambda: word2id['<unk>'], word2id)
 
     def __len__(self) -> int:
