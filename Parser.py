@@ -33,7 +33,7 @@ def parse_args(args=None):
                         help="Number of updates steps to accumulate before performing a backward/update pass.")
     parser.add_argument("--num_train_epochs", default=10, type=float,
                         help="Total number of training epochs to perform.")
-    parser.add_argument("--max_grad_norm", default=10, type=float,
+    parser.add_argument("--max_grad_norm", default=5, type=float,
                         help="Max gradient norm.")
     parser.add_argument('--score_type_parser', default='dot', type=str)
     parser.add_argument('--score_type_predictor', default='denselinear', type=str)
