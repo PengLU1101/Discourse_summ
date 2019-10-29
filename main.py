@@ -15,7 +15,7 @@ import torch
 import numpy as np
 #from prefetch_generator import BackgroundGenerator
 from torch.utils.tensorboard import SummaryWriter
-from transformers import WarmupLinearSchedule
+from transformers import WarmupLinearSchedule, AdamW
 
 import Model
 from Dataset import CnnDmDataset, make_vocab
@@ -100,18 +100,28 @@ def main(args):
 
         # Set training configuration
         current_learning_rate = args.learning_rate
-        # optimizer = torch.optim.SGD(
-        #     filter(lambda p: p.requires_grad, pe_model.parameters()),
-        #     lr=current_learning_rate,
-        #     weight_decay=args.L2,
-        #     momentum=args.momentum
-        # )
-        optimizer = torch.optim.Adam(
-            filter(lambda p: p.requires_grad, pe_model.parameters()),
-            lr=current_learning_rate,
-            weight_decay=args.L2,
-            #momentum=args.momentum
-        )
+        if args.optim == 'sgd':
+            optimizer = torch.optim.SGD(
+                filter(lambda p: p.requires_grad, pe_model.parameters()),
+                lr=current_learning_rate,
+                weight_decay=args.L2,
+                momentum=args.momentum
+            )
+        elif args.optim == 'adam':
+            optimizer = torch.optim.Adam(
+                filter(lambda p: p.requires_grad, pe_model.parameters()),
+                lr=current_learning_rate,
+                weight_decay=args.L2,
+            )
+        elif args.optim == 'adamw':
+            no_decay = ['bias', 'LayerNorm.weight']
+            optimizer_grouped_parameters = [
+                {'params': [p for n, p in pe_model.named_parameters() if not any(nd in n for nd in no_decay)],
+                 'weight_decay': args.L2},
+                {'params': [p for n, p in pe_model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+            ]
+            optimizer = AdamW(optimizer_grouped_parameters, lr=current_learning_rate, eps=args.adam_epsilon)
+
         if args.max_steps > 0:
             t_total = args.max_steps
             args.num_train_epochs = args.max_steps // (len(train_loader) // args.gradient_accumulation_steps) + 1
@@ -122,7 +132,7 @@ def main(args):
             warm_up_steps = args.warm_up_steps
         else:
             warm_up_steps = args.max_steps // 10
-        scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warm_up_steps, t_total=t_total)
+        scheduler = WarmupLinearSchedule(optimizer, warmup_steps=warm_up_steps, t_total=t_total)
     if args.do_valid:
         valid_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                                    batch_size=args.test_batch_size,
