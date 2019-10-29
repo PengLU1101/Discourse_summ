@@ -192,6 +192,7 @@ class PEmodel(nn.Module):
                 loss_neg = (loss_neg - torch.mean(lld['bwd_neg'])) / 2
         return (loss_pos, loss_neg, mask)
 
+
     @staticmethod
     def train_step(model,
                    optimizer,
