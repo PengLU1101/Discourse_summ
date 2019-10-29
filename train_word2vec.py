@@ -72,7 +72,7 @@ def main(args):
     get_vocab()
     sentences = Sentences()
     model = gensim.models.Word2Vec(
-        size=args.dim, min_count=5, workers=16, sg=1)
+        size=args.dim, min_count=5, workers=16, sg=0)
     model.build_vocab(sentences)
     print(f'vocab built in {timedelta(seconds=time()-start)}')
     model.train(sentences,
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='train word2vec embedding used for model initialization'
     )
-    parser.add_argument('--path', default='/u/lupeng/Project/code/Discourse_summ/word2vec', help='root of the model')
+    parser.add_argument('--path', default='/u/lupeng/Project/code/Discourse_summ/word2vec_c', help='root of the model')
     parser.add_argument('--dim', action='store', type=int, default=128)
     args = parser.parse_args()
 
