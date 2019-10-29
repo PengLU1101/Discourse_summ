@@ -30,6 +30,8 @@ class Predic_Net(nn.Module):
             self.func: Callable[[T, T], T] = torch.bmm
         elif score_type == 'denselinear':
             self.func = nn.Linear(4 * dim_hid, 2)
+        elif score_type == 'linear':
+            self.func = nn.Linear(2 * dim_hid, 2)
         self.init_para()
         self.norm_factor = np.sqrt(dim_hid)
 
@@ -96,14 +98,20 @@ class Predic_Net(nn.Module):
         elif self.score_type == 'denselinear':
             h = h[:, None, :]
             t = t[:, None, :]
-            # print(h.size())
-            # print(t.size())
             lld = self.func(torch.cat((
                 h,
                 t,
                 h*t,
                 torch.abs(h-t)),
                 dim = -1)
+            )
+        elif self.score_type == 'linear':
+            h = h[:, None, :]
+            t = t[:, None, :]
+            lld = self.func(torch.cat((
+                h,
+                t),
+                dim=-1)
             )
 
         return lld
