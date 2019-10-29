@@ -61,6 +61,9 @@ def parse_args(args=None):
     parser.add_argument('-init', '--init_checkpoint', default=None, type=str)
     parser.add_argument('--max_steps', default=3000000, type=int)
     parser.add_argument('--warm_up_steps', default=3000, type=int)
+    parser.add_argument("--adam_epsilon", default=1e-8, type=float,
+                        help="Epsilon for Adam optimizer.")
+    parser.add_argument('--optim', type=str, default='sgd', help='optimizer(sgd/adam/adamw)')
 
     parser.add_argument('--save_checkpoint_steps', default=10000, type=int)
     parser.add_argument('--valid_steps', default=10000, type=int)
