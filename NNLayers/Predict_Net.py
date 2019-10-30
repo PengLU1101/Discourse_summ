@@ -44,9 +44,7 @@ class Predic_Net(nn.Module):
             self.get_sm, 
             rep_sents
             )) #item h1 h2 h3 h4
-        ##################################be careful this
-        #fwd = [x[:-1, :] for x in rep_sents]
-        ##################################be careful this
+
         bwd: List[T] = list(map(
             self.get_sm, 
             [x.flip((0, )) for x in rep_sents]
@@ -62,13 +60,11 @@ class Predic_Net(nn.Module):
             [rep[1:, :] for rep in rep_sents],
             dim=0
         )
-        #fwd_neg = torch.cat(fwd_neg, dim=0)
         bwd_h = torch.cat(doc_bwd, dim=0)
         bwd_pos = torch.cat(
             [rep.flip((0,))[1:, :] for rep in rep_sents],
             dim=0
         )
-        #bwd_neg = torch.cat(bwd_neg, dim=0) ##### ORDER MATTERS!!!!!!!!!!!!!!!!!!!!!11
         if self.score_type == 'denselinear':
             fp_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_pos), dim=-1)
             fn_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_neg), dim=-1)
