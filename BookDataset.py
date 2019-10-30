@@ -24,7 +24,7 @@ class WikiTextDataset(data.Dataset):
         self.word2id = defaultdict(lambda: word2id['<unk>'], word2id)
 
     def __len__(self) -> int:
-        return self._n_data
+        return self._n_data #// 4 * 3
 
     def __getitem__(self, i: int):
         with open(os.path.join(self._data_path, f'{i}.json')) as f:
