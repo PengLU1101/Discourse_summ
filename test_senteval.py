@@ -6,6 +6,7 @@ import logging
 import sys
 sys.setdefaultencoding('utf8')
 import senteval
+from Model import PEmodel
 
 # Set PATHs
 PATH_TO_SENTEVAL = '../'
@@ -18,6 +19,14 @@ def prepare():
 
 def batcher(params, batch):
     sentences = [' '.join(s) for s in batch]
+    
+
+    embeddings = PEmodel.encode(
+        params['encoder'],
+        input,
+        mask,
+        length_dict
+    )
     return embeddings
 
 params_senteval = {
