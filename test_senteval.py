@@ -17,7 +17,7 @@ def prepare():
     pass
 
 def batcher(params, batch):
-
+    sentences = [' '.join(s) for s in batch]
     return embeddings
 
 params_senteval = {
