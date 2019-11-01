@@ -95,7 +95,7 @@ def save_model(model, optimizer, save_variable_list, args):
 
     argparse_dict = vars(args)
     print(argparse_dict)
-    save_path = os.path.join(args.save_path, args.machine)
+    save_path = args.save_path
     if not os.path.isdir(save_path):
         os.mkdir(save_path)
     with open(os.path.join(save_path, 'config.json'), 'w') as fjson:
@@ -114,9 +114,9 @@ def set_logger(args):
     Write logs to checkpoint and console
     '''
     if not args.init_checkpoint:
-        save_path = os.path.join(args.save_path, args.machine)
+        save_path = args.save_path
     else:
-        save_path = os.path.join(args.init_checkpoint, args.machine)
+        save_path = args.init_checkpoint
 
     if args.do_train:
         log_file = os.path.join(save_path, 'train.log')
