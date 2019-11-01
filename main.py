@@ -9,11 +9,9 @@ import numpy as np
 import argparse
 import logging
 import json, pickle
-from tqdm import tqdm
 
 import torch
 import numpy as np
-#from prefetch_generator import BackgroundGenerator
 from torch.utils.tensorboard import SummaryWriter
 from transformers import WarmupLinearSchedule, AdamW
 
@@ -174,7 +172,7 @@ def main(args):
 
     if args.do_train:
         training_logs = []
-        writer = SummaryWriter(os.path.join(args.save_path, args.machine))
+        writer = SummaryWriter(args.save_path)
         # Training Loop
         train_iter = iter(train_loader)
         for step in range(init_step, args.max_steps):
