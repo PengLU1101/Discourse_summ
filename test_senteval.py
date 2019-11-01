@@ -14,17 +14,37 @@ PATH_TO_DATA = '../data/senteval_data/'
 PATH_TO_SKIPTHOUGHT = ''
 
 
+def collate_fn(data):
+    def pad_mask(data):
+        chain_src = list(chain.from_iterable([_ for _ in data]))
+        src_lens = [len(_) for _ in chain_src]
+        max_src_lens = max(src_lens)
+        padded_src = torch.zeros(len(chain_src), max_src_lens).long()
+        mask_src = torch.zeros(len(chain_src), max_src_lens).long()
+        for i, sent in enumerate(chain_src):
+            end = src_lens[i]
+            padded_src[i, :end] = torch.LongTensor(sent[:end])
+            mask_src[i, :end] = 1
+        return padded_src, mask_src, src_lens
+    data_idx =
+    padded_src, mask_src, src_lens = pad_mask(data_idx)
+    Tensor_dict = {'src': padded_src,
+                   'mask_src': mask_src,
+                   }
+    length_dict = {'src': src_lens}
+    return Tensor_dict, length_dict
 def prepare():
     pass
 
+
 def batcher(params, batch):
-    sentences = [' '.join(s) for s in batch]
-    
+    sentences = [[params['word2id'][x] for x in ['<start>'] + s + ['<end>']] for s in batch]
+    Tensor_dict, length_dict = collate_fn(sentences)
 
     embeddings = PEmodel.encode(
         params['encoder'],
-        input,
-        mask,
+        Tensor_dict['src'],
+        Tensor_dict['mask_src'],
         length_dict
     )
     return embeddings
@@ -45,6 +65,7 @@ params_senteval['classifier'] = {
 
 
 if __name__ == "__main__":
+    params_senteval['word2id'] = load_pkl(path_word2id)
     params_senteval['encoder'] = PEmodel.load_model()
     se = senteval.engine.SE(params_senteval, batcher, prepare)
     transfer_tasks = ['CR', 'MR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC', 'SNLI',
