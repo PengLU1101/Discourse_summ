@@ -26,7 +26,7 @@ def parse_args(args=None):
 
     #parser.add_argument('--data_path', type=str, default='/data/rali5/Tmp/lupeng/data/new_cnndm')
     parser.add_argument('--data_path', type=str, default='/u/lupeng/Project/dataset/wikitext-103')
-    parser.add_argument('--dataset', type=str, default='wiki', help='cnndm or book')
+    parser.add_argument('--dataset', type=str, default='wiki', help='cnndm, wiki or book')
     parser.add_argument('-save', '--save_path', default='/u/lupeng/Project/code/Discourse_summ/saved', type=str)
     #parser.add_argument()
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
