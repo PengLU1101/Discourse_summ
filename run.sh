@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-export DATA_DIR='/data/rali5/Tmp/lupeng/data/cnn-dailymail'
-export SAVE_DIR='/u/lupeng/Project/code/Discourse_summ/saved'
+export DATA_PATH='/data/rali5/Tmp/lupeng/data/cnn-dailymail'
+export SAVE_PATH='/u/lupeng/Project/code/Discourse_summ/saved'
 
 python -u -c 'import torch; print(torch.__version__)'
 
 MODE=$1
-SCORE=$2
+MODEL=$2
 SAVEID=$3
 DATASET=$4
 
@@ -17,22 +17,26 @@ BATCH_SIZE=$5
 HIDDEN_DIM=$6
 LEARNING_RATE=${7}
 MAX_STEPS=${8}
-TEST_BATCH_SIZE=${9}
+WARM_UP_STEPS=${9}
+PARSER_TYPE=${10}
+PREDICTOR_TYPE=${11}
+
 
 if [[ $MODE == "train" ]]
 then
 echo "Start Training......"
 
 python -u $CODE_PATH/run.py --do_train \
-    --cuda \
     --do_valid \
     --do_test \
     --data_path $FULL_DATA_PATH \
-    --model $MODEL \
+    --encoder_type $MODEL \
+    --score_type_parser $PARSER_TYPE \
+    --score_type_predictor $PREDICTOR_TYPE\
     -b $BATCH_SIZE -md $HIDDEN_DIM -ed $EMBEDDING_DIM \
-    -lr $LEARNING_RATE --max_steps $MAX_STEPS \
-    -save $SAVE --test_batch_size $TEST_BATCH_SIZE \
-    ${14} ${15} ${16} ${17} ${18} ${19} ${20}
+    -lr $LEARNING_RATE --max_steps $MAX_STEPS --warm_up_steps $WARM_UP_STEPS\
+    -save $SAVE \
+    #${14} ${15} ${16} ${17} ${18} ${19} ${20}
 
 elif [ $MODE == "valid" ]
 then
