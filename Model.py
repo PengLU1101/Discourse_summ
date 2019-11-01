@@ -192,6 +192,12 @@ class PEmodel(nn.Module):
                 loss_neg = (loss_neg - torch.mean(lld['bwd_neg'])) / 2
         return (loss_pos, loss_neg, mask)
 
+    def encode(self,
+               input: T,
+               mask: T,
+               length_dict: Dict[str, List[int]]) -> T:
+        reps: T = self.encoder(input, mask, None, length_dict['src'])
+        return reps
 
     @staticmethod
     def train_step(model,
