@@ -9,15 +9,15 @@ import os
 import time
 import random
 import numpy as np
-import argparse
 import logging
 import json, pickle
+from tqdm import tqdm
 
 import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
-from transformers import WarmupLinearSchedule, AdamW
 
+from NNLayers.utils.optimization import WarmupLinearSchedule
 import Model
 from Dataset import CnnDmDataset, make_vocab
 from BookDataset import WikiTextDataset
@@ -29,15 +29,10 @@ from Parser import *
 #     print('please use environment variable to specify .pkl file directories')
 
 def main(args):
-    # train/test
-    # data sir/model dir/ checkpoint dir
-    # prepare dataset
-    # build model/optimizer
-    #
+
     np.random.seed(1101)
     torch.manual_seed(1101)
     torch.cuda.manual_seed(1101)
-    args.do_train = True
     if (not args.do_train) and (not args.do_valid) and (not args.do_test):
         raise ValueError('one of train/val/test mode must be choosed.')
 
@@ -62,14 +57,15 @@ def main(args):
     # Logs details of datasets.
     logging.info(f'Model: {args.model}')
     logging.info(f'Data Path: {args.data_path}')
+    logging.info(f'Save Path: {args.save_path}')
 
     wb = read_pkl(os.path.join(args.data_path, 'vocab_cnt.pkl'))
     word2id = make_vocab(wb, args.vocab_size)
+    name2data = {'cnndm': CnnDmDataset, 'book': None, 'wiki': WikiTextDataset} #BookDataset}
     if args.dataset == "wiki":
         args.word2id = len(word2id) + 1
     else:
         args.word2id = len(word2id)
-    name2data = {'cnndm': CnnDmDataset, 'book': None, 'wiki': WikiTextDataset} #BookDataset}
     if args.dataset not in name2data:
         raise ValueError('You should use dataset <cnndm>, <wiki> or <book>')
 
@@ -86,10 +82,6 @@ def main(args):
     pe_model = Model.build_model(args, weight)
 
     logging.info('Model Parameter Configuration:')
-    #for name, param in pe_model.named_parameters():
-    #    logging.info(
-    #        f'Parameter {name}: {str(param.size())}, require_grad = {str(param.requires_grad)}'
-    #    )
 
     if torch.cuda.is_available():
         pe_model = pe_model.cuda()
@@ -124,7 +116,7 @@ def main(args):
                  'weight_decay': args.L2},
                 {'params': [p for n, p in pe_model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
             ]
-            optimizer = AdamW(optimizer_grouped_parameters, lr=current_learning_rate, eps=args.adam_epsilon)
+            optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=current_learning_rate)
 
         if args.max_steps > 0:
             t_total = args.max_steps
@@ -164,8 +156,6 @@ def main(args):
                                                   collate_fn=test_dataset.collate_fn)
 
 
-    # train_iterator = iter(train_dataloader)
-    start_time = time.time()
     step = init_step
 
     logging.info('Start Training...')
@@ -181,12 +171,9 @@ def main(args):
         writer = SummaryWriter(args.save_path)
         # Training Loop
         train_iter = iter(train_loader)
-        for step in range(init_step, args.max_steps):
-            #for i in range(len(train_iterator)):
-            #pbar = #, total=len(train_loader))
-            # train_iterator = iter(train_dataloader)
-            start_time = time.time()
-            #for step, data in enumerate(train_loader):
+        for step in tqdm(range(init_step, args.max_steps)):
+            if step > args.tune_stop:
+                break
             try:
                 data = next(train_iter)
             except:
