@@ -25,7 +25,7 @@ def parse_args(args=None):
     parser.add_argument('--machine', type=str, default='octal19')
 
     #parser.add_argument('--data_path', type=str, default='/data/rali5/Tmp/lupeng/data/new_cnndm')
-    parser.add_argument('--data_path', type=str, default='/u/lupeng/Project/dataset/wikitext-103')
+    parser.add_argument('--data_path', type=str, default='/u/lupeng/Project/dataset/wikitext_103')
     parser.add_argument('--dataset', type=str, default='wiki', help='cnndm, wiki or book')
     parser.add_argument('-save', '--save_path', default='/u/lupeng/Project/code/Discourse_summ/saved', type=str)
     #parser.add_argument()
@@ -67,7 +67,7 @@ def parse_args(args=None):
 
     parser.add_argument('--save_checkpoint_steps', default=10000, type=int)
     parser.add_argument('--valid_steps', default=10000, type=int)
-    parser.add_argument('--log_steps', default=10, type=int, help='train log every xx steps')
+    parser.add_argument('--log_steps', default=100, type=int, help='train log every xx steps')
     parser.add_argument('--test_log_steps', default=1000, type=int, help='valid/test log every xx steps')
 
     return parser.parse_args()
