@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export DATA_PATH='/data/rali5/Tmp/lupeng/data/cnn-dailymail'
+export DATA_PATH='/u/lupeng/Project/dataset'
 export SAVE_PATH='/u/lupeng/Project/code/Discourse_summ/saved'
 export CODE_PATH='/u/lupeng/Project/code/Discourse_summ/codes'
 
@@ -9,9 +9,10 @@ MODE=$1
 MODEL=$2
 SAVEID=$3
 DATASET=$4
-
+MACHINE=${12}
 FULL_DATA_PATH=$DATA_PATH/$DATASET
-SAVE=$SAVE_PATH/"$MODEL"_"$DATASET"_"$SAVE_ID"
+SAVE=$SAVE_PATH/$MACHINE/"$MODEL"_"$DATASET"_"$SAVEID"
+echo $SAVE
 
 #Only used in training
 BATCH_SIZE=$5
@@ -28,8 +29,8 @@ then
 echo "Start Training......"
 
 python -u $CODE_PATH/run.py --do_train \
-    --do_valid \
-    --do_test \
+    #--do_valid \
+    #--do_test \
     --data_path $FULL_DATA_PATH \
     --encoder_type $MODEL \
     --score_type_parser $PARSER_TYPE \
@@ -44,14 +45,14 @@ then
 echo "Resume training..."
 
 python -u $CODE_PATH/run.py --do_train \
-    --do_valid \
-    --do_test \
+    #--do_valid \
+    #--do_test \
     --data_path $FULL_DATA_PATH \
-    --encoder_type $MODEL \
-    --score_type_parser $PARSER_TYPE \
-    --score_type_predictor $PREDICTOR_TYPE\
-    -b $BATCH_SIZE -md $HIDDEN_DIM -ed $EMBEDDING_DIM \
-    -lr $LEARNING_RATE --max_steps $MAX_STEPS --warm_up_steps $WARM_UP_STEPS\
+    #--encoder_type $MODEL \
+    #--score_type_parser $PARSER_TYPE \
+    #--score_type_predictor $PREDICTOR_TYPE\
+    #-b $BATCH_SIZE -md $HIDDEN_DIM -ed $EMBEDDING_DIM \
+    #-lr $LEARNING_RATE --max_steps $MAX_STEPS --warm_up_steps $WARM_UP_STEPS\
     -init $SAVE \
 
 
