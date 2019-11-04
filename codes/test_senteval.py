@@ -7,6 +7,16 @@ import sys
 sys.setdefaultencoding('utf8')
 import senteval
 from Model import PEmodel
+import os, random
+from typing import List, Dict
+from itertools import chain
+from collections import defaultdict, OrderedDict
+import json
+import re
+import pickle
+
+import torch
+import torch.utils.data as data
 
 # Set PATHs
 PATH_TO_SENTEVAL = '../'
@@ -26,7 +36,6 @@ def collate_fn(data):
             padded_src[i, :end] = torch.LongTensor(sent[:end])
             mask_src[i, :end] = 1
         return padded_src, mask_src, src_lens
-    data_idx =
     padded_src, mask_src, src_lens = pad_mask(data_idx)
     Tensor_dict = {'src': padded_src,
                    'mask_src': mask_src,
