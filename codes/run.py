@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # author：Peng time:2019-07-16
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import os
 import time
@@ -48,6 +51,7 @@ def main(args):
 
     if args.save_path and not os.path.exists(args.save_path):
         os.makedirs(args.save_path)
+
     set_logger(args)
     if torch.cuda.is_available():
         logging.info('Gpu is avialable! and set args.device = cuda.')
@@ -127,7 +131,7 @@ def main(args):
             args.num_train_epochs = args.max_steps // (len(train_loader) // args.gradient_accumulation_steps) + 1
         else:
             t_total = len(train_loader) // args.gradient_accumulation_steps * args.num_train_epochs
-        
+
         if args.warm_up_steps:
             warm_up_steps = args.warm_up_steps
         else:
@@ -139,14 +143,6 @@ def main(args):
                                                    shuffle=False,
                                                    num_workers=max(1, args.cpu_num // 2),
                                                    collate_fn=val_dataset.collate_fn)
-    if args.do_test:
-        test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                                  batch_size=args.test_batch_size,
-                                                  shuffle=False,
-                                                  num_workers=max(1, args.cpu_num // 2),
-                                                  collate_fn=test_dataset.collate_fn)
-
-
     if args.init_checkpoint:
         # Restore model from checkpoint directory
         logging.info('Loading checkpoint %s...' % args.init_checkpoint)
@@ -160,6 +156,14 @@ def main(args):
     else:
         logging.info('Ramdomly Initializing {args.model} Model...')
         init_step = 0
+    if args.do_test:
+        test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                                  batch_size=args.test_batch_size,
+                                                  shuffle=False,
+                                                  num_workers=max(1, args.cpu_num // 2),
+                                                  collate_fn=test_dataset.collate_fn)
+
+
     # train_iterator = iter(train_dataloader)
     start_time = time.time()
     step = init_step
