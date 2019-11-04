@@ -6,7 +6,7 @@ import logging
 import sys
 sys.setdefaultencoding('utf8')
 import senteval
-from Model import PEmodel
+from Model import PEmodel, build_model
 import os, random
 from typing import List, Dict
 from itertools import chain
