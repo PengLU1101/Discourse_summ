@@ -29,15 +29,20 @@ class WikiTextDataset(data.Dataset):
     def __getitem__(self, i: int):
         with open(os.path.join(self._data_path, f'{i}.json')) as f:
             js = json.loads(f.read())
-        src_list = list(map(self.convert2list, js['src']))
-        neg_list = list(map(self.convert2list, js['neg']))
+        if 'src_idx' in js and 'neg_idx_fwd' in js and 'neg_idx_bwd' in js:
+            return js
+        else:
+            src_list = list(map(self.convert2list, js['src']))
+            neg_list = list(map(self.convert2list, js['neg']))
 
-        if len(src_list) > 20:
-            src_list = src_list[: 20]
-        js['src_idx'] = src_list
-        js['neg_idx_fwd'] = neg_list[: (len(src_list) - 1)]
-        js['neg_idx_bwd'] = neg_list[(len(src_list) - 1): 2 * (len(src_list) - 1)]
-        return js
+            if len(src_list) > 20:
+                src_list = src_list[: 20]
+            js['src_idx'] = src_list
+            js['neg_idx_fwd'] = neg_list[: (len(src_list) - 1)]
+            js['neg_idx_bwd'] = neg_list[(len(src_list) - 1): 2 * (len(src_list) - 1)]
+            with open(os.path.join(self._data_path, f'{i}.json'), "w+") as f:
+                json.dump(js, f)
+            return js
 
     def convert2list(self, s: str):
         strings = s.lower().split()
