@@ -131,6 +131,7 @@ def check_files(path, split):
     #     with open(os.path.join(jsonfile_dir, f'{i}.json'), 'w') as f:
     #         json.dump(js, f)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='data processing',
