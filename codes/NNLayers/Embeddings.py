@@ -65,7 +65,7 @@ class WordEmbedding(nn.Module):
                  vocab: int,
                  dim: int):
         super(WordEmbedding, self).__init__()
-        self.lut = nn.Embedding(vocab, dim)
+        self.lut = nn.Embedding(vocab, dim, padding_idx=0)
         self.dim = dim
         self.vocab = vocab
 
@@ -80,7 +80,7 @@ class WordEmbedding(nn.Module):
         embeds = self.lut(x)
 
         return embeds
-    def apply_weights(self, weights, fine_tune_flag=False):
+    def apply_weights(self, weights, fine_tune_flag=True):
         scope = np.sqrt(1.0 / self.dim)
         #with open(path, 'r') as f:
         #    weight = pickle.load(f)
@@ -89,7 +89,7 @@ class WordEmbedding(nn.Module):
         else:
             pass
         #self.lut.weight.data.normal_(0, scope)
-        self.lut.weight.data[1:4] = torch.zeros(3, self.dim).normal_(0, scope)
+        #self.lut.weight.data[1:4] = torch.zeros(3, self.dim).normal_(0, scope)
         if not fine_tune_flag:
             for p in self.lut.parameters():
                 p.requires_grad = False
