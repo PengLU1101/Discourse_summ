@@ -74,8 +74,18 @@ params_senteval['classifier'] = {
 
 
 if __name__ == "__main__":
-    params_senteval['word2id'] = load_pkl(path_word2id)
-    params_senteval['encoder'] = PEmodel.load_model()
+    init_checkpoint = '/u/lupeng/Project/code/Discourse_summ/saved/octal20'
+    with open(os.path.join(init_checkpoint, 'config.json'), 'r') as fjson:
+        argparse_dict = json.load(fjson)
+        logging.info(f'Loading checkpoint {init_checkpoint}...')
+        checkpoint = torch.load(os.path.join(init_checkpoint, 'checkpoint'))
+    wb = read_pkl(os.path.join(argparse_dict.data_path, 'vocab_cnt.pkl'))
+    word2id = make_vocab(wb, argparse_dict.vocab_size)
+    argparse_dict.word2id = len(word2id) + 1
+    model = PEmodel.build_model(argparse_dict)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    params_senteval['word2id'] = word2id
+    params_senteval['encoder'] = model
     se = senteval.engine.SE(params_senteval, batcher, prepare)
     transfer_tasks = ['CR', 'MR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC', 'SNLI',
                       'SICKEntailment', 'SICKRelatedness', 'STSBenchmark', 'ImageCaptionRetrieval',
