@@ -197,6 +197,7 @@ class PEmodel(nn.Module):
                input: T,
                mask: T,
                length_dict: Dict[str, List[int]]) -> T:
+        model.eval()
         reps: T = model.encoder(input, mask, None, length_dict['src'])
         return reps
 
