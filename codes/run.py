@@ -20,13 +20,36 @@ from torch.utils.tensorboard import SummaryWriter
 from NNLayers.utils.optimization import WarmupLinearSchedule
 import Model
 from Dataset import CnnDmDataset, make_vocab
-from BookDataset import WikiTextDataset
 from Parser import *
+from Dataset_Sub import WikiTextDataset, DataPrefetcher
 
-# try:
-#     DATA_DIR = os.environ['PKL_DIR']
-# except KeyError:
-#     print('please use environment variable to specify .pkl file directories')
+def set_logger(args):
+    '''
+    Write logs to checkpoint and console
+    '''
+    if not args.init_checkpoint:
+        save_path = args.save_path
+    else:
+        save_path = args.init_checkpoint
+
+    if args.do_train:
+        log_file = os.path.join(save_path, 'train.log')
+    else:
+        log_file = os.path.join(save_path, 'test.log')
+
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S',
+        filename=log_file,
+        filemode='w'
+    )
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+
 
 def main(args):
 
@@ -50,8 +73,8 @@ def main(args):
     set_logger(args)
     if torch.cuda.is_available():
         logging.info('Gpu is avialable! and set args.device = cuda.')
-    args.weight_path = os.path.join(args.data_path, 'word2vec/weight.npy')
-    weight = np.load(args.weight_path)
+    #args.weight_path = os.path.join(args.data_path, 'word2vec/weight.npy')
+    #weight = np.load(args.weight_path)
 
     # Write logs to checkpoint and console
     # Logs details of datasets.
@@ -59,19 +82,20 @@ def main(args):
     logging.info(f'Data Path: {args.data_path}')
     logging.info(f'Save Path: {args.save_path}')
 
-    wb = read_pkl(os.path.join(args.data_path, 'vocab_cnt.pkl'))
-    word2id = make_vocab(wb, args.vocab_size)
+    #wb = read_pkl(os.path.join(args.data_path, 'vocab_cnt.pkl'))
+    #word2id = make_vocab(wb, args.vocab_size)
     name2data = {'cnndm': CnnDmDataset, 'book': None, 'wiki': WikiTextDataset} #BookDataset}
-    if args.dataset == "wiki":
-        args.word2id = len(word2id) + 1
-    else:
-        args.word2id = len(word2id)
+    #if args.dataset == "wiki":
+    #    args.word2id = len(word2id) + 1
+    #else:
+    #    args.word2id = len(word2id)
     if args.dataset not in name2data:
         raise ValueError('You should use dataset <cnndm>, <wiki> or <book>')
 
-    train_dataset = name2data[args.dataset]('train', args.data_path, word2id)
-    val_dataset = name2data[args.dataset]('valid', args.data_path, word2id)
-    test_dataset = name2data[args.dataset]('test', args.data_path, word2id)
+    train_dataset = name2data[args.dataset]('train', args.data_path) #, word2id)
+    val_dataset = name2data[args.dataset]('valid', args.data_path) #, word2id)
+    test_dataset = name2data[args.dataset]('test', args.data_path) #, word2id)
+    args.word2id = 28996 ########3super ugly!!!!!!!!!!!!!!!!
 
 
     logging.info(f'#train: {len(train_dataset)}')
@@ -79,10 +103,8 @@ def main(args):
     logging.info(f'#test: {len(test_dataset)}')
 
     # Logs details of model
-    pe_model = Model.build_model(args, weight)
-
-    logging.info('Model Parameter Configuration:')
-
+    pe_model = Model.build_model(args)
+    print('hello')
     if torch.cuda.is_available():
         pe_model = pe_model.cuda()
 
@@ -92,6 +114,7 @@ def main(args):
                                                    batch_size=args.batch_size,
                                                    shuffle=args.do_train,
                                                    num_workers=max(1, args.cpu_num // 2),
+                                                   pin_memory=True,
                                                    collate_fn=train_dataset.collate_fn)
 
         # Set training configuration
@@ -170,15 +193,18 @@ def main(args):
         training_logs = []
         writer = SummaryWriter(args.save_path)
         # Training Loop
-        train_iter = iter(train_loader)
+        #train_iter = iter(train_loader)
+        prefetcher = DataPrefetcher(train_loader)
+
         for step in tqdm(range(init_step, args.max_steps)):
-            if step > args.tune_stop:
-                break
             try:
-                data = next(train_iter)
+                #data = next(train_iter)
+                data = prefetcher.next()
             except:
-                train_iter = iter(train_loader)
-                data = next(train_iter)
+                #train_iter = iter(train_loader)
+                #data = next(train_iter)
+                prefetcher = DataPrefetcher(train_loader)
+                data = prefetcher.next()
             #for step, data in enumerate(BackgroundGenerator(train_loader)):
             log = pe_model.train_step(pe_model, optimizer, scheduler, data, args, step)
             training_logs.append(log)
