@@ -94,9 +94,12 @@ class LSTMEncoder(nn.Module):
             lengths,
             enforce_sorted=False
         )
-        out, h = self.rnn(packed_seq)
+        out, (h, c) = self.rnn(packed_seq)
+        # print(f'h size: {h.size()}')
+        # print(f'c size: {c.size()}')
         if self.bidirectional:
-            h = torch.cat((h[-1][-1], h[-1][-2]), dim=-1)
+            h = torch.cat((h[-1], h[-2]), dim=-1)
+
         else:
             h = h[-1]
         if idx_list:
@@ -211,7 +214,7 @@ class PEmodel(nn.Module):
         model.train()
         optimizer.zero_grad()
 
-        Tensor_dict, token_dict, idx_dict, length_dict = data
+        Tensor_dict, idx_dict, length_dict = data
 
         pos_loss, neg_loss, gate_list = model(
             Tensor_dict['src'].cuda(),
@@ -268,7 +271,7 @@ class PEmodel(nn.Module):
 
         return log
 
-def build_model(para, weight):
+def build_model(para, weight=None):
     if para.encoder_type == 'transformer':
         encoder = TransformerEncoder(
             para.word2id,
