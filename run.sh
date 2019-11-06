@@ -17,7 +17,11 @@ WARM_UP_STEPS=${9}
 PARSER_TYPE=${10}
 PREDICTOR_TYPE=${11}
 MACHINE=${12}
-TUNE_STOP=${13}
+DROPOUT=${13}
+TUNE_STOP=${14}
+NUM_LAYER=${15}
+OPTIM=${16}
+
 
 
 FULL_DATA_PATH=$DATA_PATH/$DATASET
@@ -33,8 +37,8 @@ python -u $CODE_PATH/run.py --do_train \
     --encoder_type $MODEL \
     --score_type_parser $PARSER_TYPE \
     --score_type_predictor $PREDICTOR_TYPE\
-    -b $BATCH_SIZE -md $HIDDEN_DIM \
-    -lr $LEARNING_RATE --max_steps $MAX_STEPS --warm_up_steps $WARM_UP_STEPS\
+    -b $BATCH_SIZE -md $HIDDEN_DIM -ed 128 --dropout $DROPOUT --n_layer $NUM_LAYER\
+    -lr $LEARNING_RATE --max_steps $MAX_STEPS --warm_up_steps $WARM_UP_STEPS --optim $OPTIM\
     --tune_stop $TUNE_STOP
     #${14} ${15} ${16} ${17} ${18} ${19} ${20}
 
