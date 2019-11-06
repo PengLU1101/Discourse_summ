@@ -23,6 +23,8 @@ class Score_Net(nn.Module):
         self.head = nn.Parameter(T(1, dim_in))
         self.tail = nn.Parameter(T(1, dim_in))
 
+        self.layernorm = nn.LayerNorm(dim_in)
+
         if score_type == 'bilinear':
             self.func: Callable[[T, T], T] = nn.Bilinear(dim_in, dim_in, 1)
         else:
@@ -35,13 +37,13 @@ class Score_Net(nn.Module):
         :return:
         """
         #assert rep_srcs.size(0)
-        rep_with_head = torch.cat(
+        rep_with_head = self.layernorm(torch.cat(
             tuple(map(self.cat_h, rep_srcs)), dim=0
-        )[:, None, :] # (B x seq) x 1 x dim_hid
-        rep_with_tail = torch.cat(
+        ))[:, None, :] # (B x seq) x 1 x dim_hid
+        rep_with_tail = self.layernorm(torch.cat(
             tuple(map(self.cat_t, rep_srcs)),
             dim=0
-        )
+        ))
         if self.score_type == 'bilinear':
             score = self.func(
                 rep_with_head,
