@@ -34,6 +34,7 @@ class Predic_Net(nn.Module):
             self.func = nn.Linear(2 * dim_hid, 2)
         self.init_para()
         self.norm_factor = np.sqrt(dim_hid)
+        self.layernorm = nn.LayerNorm(dim_hid)
 
     def forward(self,
                 rep_sents: List[T],
@@ -55,17 +56,18 @@ class Predic_Net(nn.Module):
             ))
         doc_fwd, doc_bwd = self.compute_h(fwd, bwd, mask)
 
-        fwd_h = torch.cat(doc_fwd, dim=0)
-        fwd_pos = torch.cat(
+        fwd_h = self.layernorm(torch.cat(doc_fwd, dim=0))
+        fwd_pos = self.layernorm(torch.cat(
             [rep[1:, :] for rep in rep_sents],
             dim=0
-        )
-        bwd_h = torch.cat(doc_bwd, dim=0)
-        bwd_pos = torch.cat(
+        ))
+        bwd_h = self.layernorm(torch.cat(doc_bwd, dim=0))
+        bwd_pos = self.layernorm(torch.cat(
             [rep.flip((0,))[1:, :] for rep in rep_sents],
             dim=0
-        )
-        if self.score_type == 'denselinear':
+        ))
+        fwd_neg, bwd_neg = self.layernorm(fwd_neg), self.layernorm(bwd_neg)
+        if self.score_type == 'denselinear' or self.score_type == 'linear':
             fp_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_pos), dim=-1)
             fn_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_neg), dim=-1)
             if self.bidirectional:
