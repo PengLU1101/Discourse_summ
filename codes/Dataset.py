@@ -32,7 +32,7 @@ def make_vocab(wc, vocab_size):
         if w not in word2id:
             word2id[w] = i
         else:
-            print(f'fk is {w}')
+            pass
     return word2id
 
 class CnnDmDataset(data.Dataset):
