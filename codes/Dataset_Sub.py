@@ -46,7 +46,7 @@ class DataPrefetcher():
         self.preload()
         return data
 
-class WikiTextDataset(data.Dataset):
+class TextDataset(data.Dataset):
     def __init__(self,
                  split: str,
                  path: str) -> None:
@@ -63,7 +63,10 @@ class WikiTextDataset(data.Dataset):
         if 'src_idx' in js and 'neg_idx_fwd' in js and 'neg_idx_bwd' in js:
             return js
         else:
-            src_list = list(map(self.convert2list, js['src']))
+            if 'article' in js:
+                src_list = list(map(self.convert2list, js['article']))
+            else:
+                src_list = list(map(self.convert2list, js['src']))
             neg_list = list(map(self.convert2list, js['neg']))
 
             if len(src_list) > 20:
@@ -76,6 +79,9 @@ class WikiTextDataset(data.Dataset):
             return js
 
     def convert2list(self, s: str):
+        s_tokens = s.rstrip().split()
+        if len(s.rstrip().split()) > 50:
+            s = " ".join(s_tokens[:50])
         tokenized_text = tokenizer.convert_tokens_to_ids(
             tokenizer.tokenize("[CLS]" + s + "[SEP]"))
 
