@@ -21,8 +21,8 @@ def quick_thought(flag):
         @functools.wraps(func)
         def wrapper(*args, **kw):
             if flag:
-
-                return
+                pass
+                # TODO
             else:
                 return func(*args, **kw)
 
@@ -56,7 +56,7 @@ class Predic_Net(nn.Module):
                 gate: List[Tuple[T, T]],
                 fwd_neg: T,
                 bwd_neg: T,
-                quick_thought: bool = True) -> Tuple[StateType, List[Tuple[T, T]]]:
+                quick_thought: bool = False) -> Tuple[StateType, List[Tuple[T, T]]]:
         if quick_thought:
             fwd_h = self.layernorm(torch.cat(
                 [rep[:-1, :] for rep in rep_sents],
@@ -66,6 +66,7 @@ class Predic_Net(nn.Module):
                 [rep.flip((0,))[:-1, :] for rep in rep_sents],
                 dim=0
             ))
+            mask = None
 
         else:
             fwd: List[T] = list(map(
