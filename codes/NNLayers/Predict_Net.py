@@ -96,7 +96,7 @@ class Predic_Net(nn.Module):
             dim=0
         ))
         fwd_neg, bwd_neg = self.layernorm(fwd_neg), self.layernorm(bwd_neg)
-        if self.score_type == 'denselinear' or self.score_type == 'linear':
+        if self.score_type in ['denselinear', 'linear']:
             fp_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_pos), dim=-1)
             fn_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_neg), dim=-1)
             if self.bidirectional:
