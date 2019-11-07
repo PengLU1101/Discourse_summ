@@ -155,14 +155,21 @@ class PEmodel(nn.Module):
                 score_idx: List[List[int]],
                 neg_input: Tuple[T, T],
                 neg_mask: Tuple[T, T],
-                length_dict: Dict[str, List[int]]) -> Tuple[T, T, List[Tuple[T, T]]]:
+                length_dict: Dict[str, List[int]],
+                flag_quick: bool) -> Tuple[T, T, List[Tuple[T, T]]]:
         reps: List[T] = self.encoder(input, mask, rep_idx, length_dict['src'])
         neg_fwd: T = self.encoder(neg_input[0], neg_mask[0], None, length_dict['nf'])
         neg_bwd: T = self.encoder(neg_input[1], neg_mask[1], None, length_dict['nb'])
         gate_list: List[Tuple[T, T]] = self.parser(reps, rep_idx, score_idx)
 
-        if self.predictor.score_type == 'denselinear':
-            lld, mask = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
+        if self.predictor.score_type in ['denselinear', 'linear']:
+            lld, mask = self.predictor(
+                reps,
+                gate_list,
+                neg_fwd,
+                neg_bwd,
+                flag_quick
+            )
             fwd_pos_label = torch.ones(
                 lld['fwd_pos'].size(0),
                 requires_grad=False
@@ -187,7 +194,13 @@ class PEmodel(nn.Module):
                 loss_neg = (loss_neg + self.loss_func(lld['bwd_neg'].squeeze(1), bwd_neg_label)) / 2
 
         else:
-            lld, mask = self.predictor(reps, gate_list, neg_fwd, neg_bwd)
+            lld, mask = self.predictor(
+                reps,
+                gate_list,
+                neg_fwd,
+                neg_bwd,
+                flag_quick
+            )
             loss_pos = -torch.mean(lld['fwd_pos'])
             loss_neg = -torch.mean(lld['fwd_neg'])
             if self.predictor.bidirectional:
@@ -213,8 +226,10 @@ class PEmodel(nn.Module):
                    istep):
         model.train()
         optimizer.zero_grad()
-
+        flag_quick = False
         Tensor_dict, idx_dict, length_dict = data
+        if istep > args.quick_thought_step:
+            flag_quick = True
 
         pos_loss, neg_loss, gate_list = model(
             Tensor_dict['src'].cuda(),
@@ -224,7 +239,7 @@ class PEmodel(nn.Module):
             (Tensor_dict['nf'].cuda(), Tensor_dict['nb'].cuda()),
             (Tensor_dict['mnf'].cuda(), Tensor_dict['mnb'].cuda()),
             length_dict,
-            #idx_dict['neg_idx']
+            flag_quick
         )
         loss = (pos_loss + neg_loss) / 2
         loss.backward()
@@ -311,7 +326,7 @@ def build_model(para, weight=None):
         para.score_type_predictor,
         para.bidirectional_compute
     )
-    if para.score_type_predictor == 'denselinear':
+    if para.score_type_predictor in ['denselinear', 'linear']:
         loss_func = nn.NLLLoss()
     else:
         loss_func = None
