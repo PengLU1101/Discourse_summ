@@ -21,7 +21,30 @@ from transformers import BertTokenizer
 tokenizer = BertTokenizer.from_pretrained("bert-base-cased", do_lower_case=True)
 
 def get_voc_size():
+    print(tokenizer.vocab_size)
     return tokenizer.vocab_size
+
+
+class DataPrefetcher():
+    def __init__(self, loader):
+        self.loader = iter(loader)
+        # self.stream = torch.cuda.Stream()
+        self.preload()
+
+    def preload(self):
+        try:
+            self.next_data = next(self.loader)
+        except StopIteration:
+            self.next_input = None
+            return
+        # with torch.cuda.stream(self.stream):
+        #     self.next_data = self.next_data.cuda(non_blocking=True)
+
+    def next(self):
+        # torch.cuda.current_stream().wait_stream(self.stream)
+        data = self.next_data
+        self.preload()
+        return data
 
 class WikiTextDataset(data.Dataset):
     def __init__(self,
@@ -43,8 +66,8 @@ class WikiTextDataset(data.Dataset):
             src_list = list(map(self.convert2list, js['src']))
             neg_list = list(map(self.convert2list, js['neg']))
 
-            if len(src_list) > 40:
-                src_list = src_list[: 40]
+            if len(src_list) > 20:
+                src_list = src_list[: 20]
             js['src_idx'] = src_list
             js['neg_idx_fwd'] = neg_list[: (len(src_list) - 1)]
             js['neg_idx_bwd'] = neg_list[(len(src_list) - 1): 2 * (len(src_list) - 1)]
@@ -61,11 +84,12 @@ class WikiTextDataset(data.Dataset):
     @staticmethod
     def _count_data(path):
         """ count number of data in the given path"""
-        matcher = re.compile(r'[0-9]+\.json')
-        match = lambda name: bool(matcher.match(name))
+        #matcher = re.compile(r'[0-9]+\.json')
+        #match = lambda name: bool(matcher.match(name))
         names = os.listdir(path)
-        n_data = len(list(filter(match, names)))
-        return n_data
+        #n_data = len(list(filter(match, names)))
+        #print(n_data)
+        return len(names)
 
     @staticmethod
     def collate_fn(data):
@@ -108,7 +132,7 @@ class WikiTextDataset(data.Dataset):
                        'mnf': mask_nf,
                        'mnb': mask_nb
                        }
-        token_dict = {'src': [_['src'] for _ in data]}
+        #token_dict = {'src': [_['src'] for _ in data]}
 
         src_idxbylen = get_idx_by_lens(src_doc_list)
         score_idxbylen = get_idx_by_lens([x + 1 for x in src_doc_list])
@@ -124,7 +148,7 @@ class WikiTextDataset(data.Dataset):
         length_dict = {'src': src_lens,
                        'nf': nf_lens,
                        'nb': nb_lens}
-        return Tensor_dict, token_dict, idx_dict, length_dict
+        return Tensor_dict, idx_dict, length_dict
 
 
 
