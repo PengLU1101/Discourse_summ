@@ -65,6 +65,7 @@ def parse_args(args=None):
     parser.add_argument("--adam_epsilon", default=1e-8, type=float,
                         help="Epsilon for Adam optimizer.")
     parser.add_argument('--optim', type=str, default='adamw', help='optimizer(sgd/adam/adamw)')
+    parser.add_argument('--quick_thought_step', default=10000, type=int)
 
     parser.add_argument('--save_checkpoint_steps', default=10000, type=int)
     parser.add_argument('--valid_steps', default=10000, type=int)
@@ -107,35 +108,6 @@ def save_model(model, optimizer, save_variable_list, args):
         'optimizer_state_dict': optimizer.state_dict()},
         os.path.join(save_path, 'checkpoint')
     )
-
-
-def set_logger(args):
-    '''
-    Write logs to checkpoint and console
-    '''
-    if not args.init_checkpoint:
-        save_path = args.save_path
-    else:
-        save_path = args.init_checkpoint
-
-    if args.do_train:
-        log_file = os.path.join(save_path, 'train.log')
-    else:
-        log_file = os.path.join(save_path, 'test.log')
-
-    logging.basicConfig(
-        format='%(asctime)s %(levelname)-8s %(message)s',
-        level=logging.INFO,
-        datefmt='%Y-%m-%d %H:%M:%S',
-        filename=log_file,
-        filemode='w'
-    )
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-    console.setFormatter(formatter)
-    logging.getLogger('').addHandler(console)
-
 
 def log_metrics(mode, step, metrics):
     '''
