@@ -226,10 +226,10 @@ class PEmodel(nn.Module):
                    istep):
         model.train()
         optimizer.zero_grad()
-        flag_quick = False
+        flag_quick = True
         Tensor_dict, idx_dict, length_dict = data
         if istep > args.quick_thought_step:
-            flag_quick = True
+            flag_quick = False
 
         pos_loss, neg_loss, gate_list = model(
             Tensor_dict['src'].cuda(),
