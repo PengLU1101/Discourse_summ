@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # author：Peng time:2019-08-21
+
 from typing import List, Tuple, Callable
 
 import torch

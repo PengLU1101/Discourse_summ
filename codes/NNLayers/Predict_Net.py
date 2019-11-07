@@ -3,6 +3,7 @@
 # author：Peng time:2019-09-21
 
 from typing import List, Tuple, Dict, Callable, Iterator
+import functools
 
 import torch
 import torch.nn as nn
@@ -14,6 +15,20 @@ import numpy as np
 
 StateType = Dict[str, T]  # pylint: disable=invalid-name
 StepFunctionType = Callable[[T, StateType], Tuple[T, StateType]]  # pylint: disable=invalid-name
+
+def quick_thought(flag):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kw):
+            if flag:
+
+                return
+            else:
+                return func(*args, **kw)
+
+        return wrapper
+
+    return decorator
 
 class Predic_Net(nn.Module):
     def __init__(self,
@@ -40,28 +55,41 @@ class Predic_Net(nn.Module):
                 rep_sents: List[T],
                 gate: List[Tuple[T, T]],
                 fwd_neg: T,
-                bwd_neg: T) -> Tuple[StateType, List[Tuple[T, T]]]:
-        fwd: List[T] = list(map(
-            self.get_sm, 
-            rep_sents
-            )) #item h1 h2 h3 h4
-
-        bwd: List[T] = list(map(
-            self.get_sm, 
-            [x.flip((0, )) for x in rep_sents]
-            )) #item h3 h2 h1 h0
-        mask: List[Tuple[T, T]] = list(map(
-            self.mask_gate,
-            gate
+                bwd_neg: T,
+                quick_thought: bool = True) -> Tuple[StateType, List[Tuple[T, T]]]:
+        if quick_thought:
+            fwd_h = self.layernorm(torch.cat(
+                [rep[:-1, :] for rep in rep_sents],
+                dim=0
             ))
-        doc_fwd, doc_bwd = self.compute_h(fwd, bwd, mask)
+            bwd_h = self.layernorm(torch.cat(
+                [rep.flip((0,))[:-1, :] for rep in rep_sents],
+                dim=0
+            ))
 
-        fwd_h = self.layernorm(torch.cat(doc_fwd, dim=0))
+        else:
+            fwd: List[T] = list(map(
+                self.get_sm,
+                rep_sents
+                )) #item h1 h2 h3 h4
+
+            bwd: List[T] = list(map(
+                self.get_sm,
+                [x.flip((0, )) for x in rep_sents]
+                )) #item h3 h2 h1 h0
+            mask: List[Tuple[T, T]] = list(map(
+                self.mask_gate,
+                gate
+                ))
+            doc_fwd, doc_bwd = self.compute_h(fwd, bwd, mask)
+
+            fwd_h = self.layernorm(torch.cat(doc_fwd, dim=0))
+            bwd_h = self.layernorm(torch.cat(doc_bwd, dim=0))
+
         fwd_pos = self.layernorm(torch.cat(
             [rep[1:, :] for rep in rep_sents],
             dim=0
         ))
-        bwd_h = self.layernorm(torch.cat(doc_bwd, dim=0))
         bwd_pos = self.layernorm(torch.cat(
             [rep.flip((0,))[1:, :] for rep in rep_sents],
             dim=0
