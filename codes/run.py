@@ -19,9 +19,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 from NNLayers.utils.optimization import WarmupLinearSchedule
 import Model
-from Dataset import CnnDmDataset, make_vocab
+#from Dataset import CnnDmDataset, make_vocab
 from Parser import *
-from Dataset_Sub import WikiTextDataset, DataPrefetcher
+from Dataset_Sub import TextDataset, DataPrefetcher
 
 def set_logger(args):
     '''
@@ -82,19 +82,14 @@ def main(args):
     logging.info(f'Data Path: {args.data_path}')
     logging.info(f'Save Path: {args.save_path}')
 
-    #wb = read_pkl(os.path.join(args.data_path, 'vocab_cnt.pkl'))
-    #word2id = make_vocab(wb, args.vocab_size)
-    name2data = {'cnndm': CnnDmDataset, 'book': None, 'wiki': WikiTextDataset} #BookDataset}
-    #if args.dataset == "wiki":
-    #    args.word2id = len(word2id) + 1
-    #else:
-    #    args.word2id = len(word2id)
+    name2data = {'cnndm': 0, 'book': 2, 'wiki': 2}
+
     if args.dataset not in name2data:
         raise ValueError('You should use dataset <cnndm>, <wiki> or <book>')
 
-    train_dataset = name2data[args.dataset]('train', args.data_path) #, word2id)
-    val_dataset = name2data[args.dataset]('valid', args.data_path) #, word2id)
-    test_dataset = name2data[args.dataset]('test', args.data_path) #, word2id)
+    train_dataset = TextDataset('train', args.data_path)
+    val_dataset = TextDataset('valid', args.data_path)
+    test_dataset = TextDataset('test', args.data_path)
     args.word2id = 28996 ########3super ugly!!!!!!!!!!!!!!!!
 
 
