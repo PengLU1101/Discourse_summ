@@ -83,7 +83,7 @@ class TextDataset(data.Dataset):
         if len(s.rstrip().split()) > 50:
             s = " ".join(s_tokens[:50])
         tokenized_text = tokenizer.convert_tokens_to_ids(
-            tokenizer.tokenize("[CLS]" + s + "[SEP]"))
+            tokenizer.tokenize("[CLS] " + s + " [SEP]"))
 
         return tokenized_text
 

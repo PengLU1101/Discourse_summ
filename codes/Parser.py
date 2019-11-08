@@ -65,7 +65,7 @@ def parse_args(args=None):
     parser.add_argument("--adam_epsilon", default=1e-8, type=float,
                         help="Epsilon for Adam optimizer.")
     parser.add_argument('--optim', type=str, default='adamw', help='optimizer(sgd/adam/adamw)')
-    parser.add_argument('--quick_thought_step', default=10000, type=int)
+    parser.add_argument('--quick_thought_step', default=100000000000000, type=int)
 
     parser.add_argument('--save_checkpoint_steps', default=10000, type=int)
     parser.add_argument('--valid_steps', default=10000, type=int)
