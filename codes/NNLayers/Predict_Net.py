@@ -84,30 +84,30 @@ class Predic_Net(nn.Module):
                 ))
             doc_fwd, doc_bwd = self.compute_h(fwd, bwd, mask)
 
-            # fwd_h = self.layernorm(torch.cat(doc_fwd, dim=0))
-            # bwd_h = self.layernorm(torch.cat(doc_bwd, dim=0))
+            fwd_h = self.layernorm(torch.cat(doc_fwd, dim=0))
+            bwd_h = self.layernorm(torch.cat(doc_bwd, dim=0))
 
-            fwd_h = torch.cat(doc_fwd, dim=0)
-            bwd_h = torch.cat(doc_bwd, dim=0)
+            # fwd_h = torch.cat(doc_fwd, dim=0)
+            # bwd_h = torch.cat(doc_bwd, dim=0)
 
-        # fwd_pos = self.layernorm(torch.cat(
-        #     [rep[1:, :] for rep in rep_sents],
-        #     dim=0
-        # ))
-        # bwd_pos = self.layernorm(torch.cat(
-        #     [rep.flip((0,))[1:, :] for rep in rep_sents],
-        #     dim=0
-        # ))
-
-        fwd_pos = torch.cat(
+        fwd_pos = self.layernorm(torch.cat(
             [rep[1:, :] for rep in rep_sents],
             dim=0
-        )
-        bwd_pos = torch.cat(
+        ))
+        bwd_pos = self.layernorm(torch.cat(
             [rep.flip((0,))[1:, :] for rep in rep_sents],
             dim=0
-        )
-        #fwd_neg, bwd_neg = self.layernorm(fwd_neg), self.layernorm(bwd_neg)
+        ))
+
+        # fwd_pos = torch.cat(
+        #     [rep[1:, :] for rep in rep_sents],
+        #     dim=0
+        # )
+        # bwd_pos = torch.cat(
+        #     [rep.flip((0,))[1:, :] for rep in rep_sents],
+        #     dim=0
+        # )
+        fwd_neg, bwd_neg = self.layernorm(fwd_neg), self.layernorm(bwd_neg)
         if self.score_type in ['denselinear', 'linear']:
             fp_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_pos), dim=-1)
             fn_lld = F.log_softmax(self.cpt_logit(fwd_h, fwd_neg), dim=-1)
