@@ -23,7 +23,7 @@ def parse_args(args=None):
     parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
     parser.add_argument('--model', type=str, default='PE_Model')
     parser.add_argument('--machine', type=str, default='octal19')
-    parser.add_argument('--tune_stop', type=int, default=None)
+    parser.add_argument('--tune_stop', type=int, default=10000)
 
     #parser.add_argument('--data_path', type=str, default='/data/rali5/Tmp/lupeng/data/new_cnndm')
     parser.add_argument('--data_path', type=str, default='/u/lupeng/Project/dataset/wikitext_103')
