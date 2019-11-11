@@ -22,6 +22,7 @@ import Model
 #from Dataset import CnnDmDataset, make_vocab
 from Parser import *
 from Dataset_Sub import TextDataset, DataPrefetcher
+from test_senteval import Bunch
 
 def set_logger(args):
     '''
@@ -59,7 +60,10 @@ def main(args):
     if (not args.do_train) and (not args.do_valid) and (not args.do_test):
         raise ValueError('one of train/val/test mode must be choosed.')
 
+
+    print(args.init_checkpoint)
     if args.init_checkpoint:
+        print('WTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTF')
         override_config(args)
     elif args.data_path is None:
         raise ValueError('one of init_checkpoint/data_path must be choosed.')
@@ -99,11 +103,32 @@ def main(args):
 
     # Logs details of model
     pe_model = Model.build_model(args)
-    print('hello')
     if torch.cuda.is_available():
         pe_model = pe_model.cuda()
 
     if args.do_train:
+        if args.init_checkpoint:
+            # Restore model from checkpoint directory
+            logging.info('Loading checkpoint %s...' % args.init_checkpoint)
+            checkpoint = torch.load(os.path.join(args.init_checkpoint, 'checkpoint'))
+            init_step = checkpoint['step']
+            #pe_model.load_state_dict(checkpoint['model_state_dict'])
+
+            with open(os.path.join(args.init_checkpoint, 'config.json'), 'r') as fjson:
+                argparse_dict = json.load(fjson)
+            checkpoint = torch.load(os.path.join(args.init_checkpoint, 'checkpoint'))
+            args = Bunch(argparse_dict)
+            pe_model = Model.build_model(args, None)
+            pe_model.load_state_dict(checkpoint['model_state_dict'])
+            if torch.cuda.is_available():
+                pe_model = pe_model.cuda()
+            # if args.do_train:
+            #     current_learning_rate = checkpoint['current_learning_rate']
+            #     warm_up_steps = checkpoint['warm_up_steps']
+            #     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        else:
+            logging.info('Ramdomly Initializing {args.model} Model...')
+            init_step = 0
         # Set training dataloader iterator
         train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                    batch_size=args.batch_size,
@@ -146,6 +171,12 @@ def main(args):
             warm_up_steps = args.warm_up_steps
         else:
             warm_up_steps = args.max_steps // 10
+        if args.init_checkpoint:
+            if args.do_train:
+                current_learning_rate = checkpoint['current_learning_rate']
+                warm_up_steps = checkpoint['warm_up_steps']
+                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
         scheduler = WarmupLinearSchedule(optimizer, warmup_steps=warm_up_steps, t_total=t_total)
     if args.do_valid:
         valid_loader = torch.utils.data.DataLoader(dataset=val_dataset,
@@ -153,19 +184,6 @@ def main(args):
                                                    shuffle=False,
                                                    num_workers=max(1, args.cpu_num // 2),
                                                    collate_fn=val_dataset.collate_fn)
-    if args.init_checkpoint:
-        # Restore model from checkpoint directory
-        logging.info('Loading checkpoint %s...' % args.init_checkpoint)
-        checkpoint = torch.load(os.path.join(args.init_checkpoint, 'checkpoint'))
-        init_step = checkpoint['step']
-        pe_model.load_state_dict(checkpoint['model_state_dict'])
-        if args.do_train:
-            current_learning_rate = checkpoint['current_learning_rate']
-            warm_up_steps = checkpoint['warm_up_steps']
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    else:
-        logging.info('Ramdomly Initializing {args.model} Model...')
-        init_step = 0
     if args.do_test:
         test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                                   batch_size=args.test_batch_size,
