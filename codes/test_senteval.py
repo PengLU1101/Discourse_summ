@@ -19,8 +19,9 @@ PATH_TO_DATA = '/u/lupeng/Project/code/SentEval/data/'
 sys.path.insert(0, PATH_TO_SENTEVAL)
 import senteval
 from Model import PEmodel, build_model
-from Dataset import make_vocab
-from Parser import read_pkl
+
+from transformers import BertTokenizer
+tokenizer = BertTokenizer.from_pretrained("bert-base-cased", do_lower_case=True)
 
 def create_dictionary(sentences, threshold=0):
     words = {}
@@ -69,7 +70,8 @@ def collate_fn(data):
 
 
 def batcher(params, batch):
-    sentences = [[params['word2id'][x] for x in ['<start>'] + s + ['<end>']] for s in batch]
+    sentences = [tokenizer.convert_tokens_to_ids(
+            tokenizer.tokenize("[CLS] " + " ".join(s) + " [SEP]")) for s in batch]
     Tensor_dict, length_dict = collate_fn(sentences)
 
     embeddings = PEmodel.encode(
@@ -102,18 +104,13 @@ class Bunch(object):
 if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
 
-    init_checkpoint = '/u/lupeng/Project/code/Discourse_summ/saved/octal20'
+    init_checkpoint = '/u/lupeng/Project/code/Discourse_summ/saved/octal14/transformer_cnndm_01'
     with open(os.path.join(init_checkpoint, 'config.json'), 'r') as fjson:
         argparse_dict = json.load(fjson)
         checkpoint = torch.load(os.path.join(init_checkpoint, 'checkpoint'))
-    wb = read_pkl(os.path.join(argparse_dict['data_path'], 'vocab_cnt.pkl'))
-    word2id = make_vocab(wb, argparse_dict['vocab_size'])
-    argparse_dict['word2id'] = len(word2id) + 1
-    # weight = np.load(args['weight_path'])
     args = Bunch(argparse_dict)
     model = build_model(args, None)
     model.load_state_dict(checkpoint['model_state_dict'])
-    params_senteval['word2id'] = defaultdict(lambda: word2id['<unk>'], word2id)
     params_senteval['encoder'] = model
 
     logging.info('start evaluating...')
@@ -123,6 +120,10 @@ if __name__ == "__main__":
                       'STS12', 'STS13', 'STS14', 'STS15', 'STS16',
                       'Length', 'WordContent', 'Depth', 'TopConstituents', 'BigramShift', 'Tense',
                       'SubjNumber', 'ObjNumber', 'OddManOut', 'CoordinationInversion']
+    # result = se.eval(transfer_tasks)
+    # # logging.info(f'result of {task}')
+    # logging.info(result)
+
     for task in transfer_tasks:
 
         try:
