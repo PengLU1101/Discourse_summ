@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-export DATA_PATH='/u/lupeng/Project/dataset'
+#export DATA_PATH='/u/lupeng/Project/dataset'
+export DATA_PATH='/data/rali5/Tmp/lupeng/data'
 export SAVE_PATH='/u/lupeng/Project/code/Discourse_summ/saved'
 export CODE_PATH='/u/lupeng/Project/code/Discourse_summ/codes'
+
+#export DATA_PATH='/content'
+#export SAVE_PATH='/content/saved'
+#export CODE_PATH='/content/Tree_thought/codes'
 
 python -u -c 'import torch; print(torch.__version__)'
 
@@ -39,7 +44,7 @@ python -u $CODE_PATH/run.py --do_train \
     --score_type_predictor $PREDICTOR_TYPE\
     -b $BATCH_SIZE -md $HIDDEN_DIM -ed 128 --dropout $DROPOUT --n_layer $NUM_LAYER\
     -lr $LEARNING_RATE --max_steps $MAX_STEPS --warm_up_steps $WARM_UP_STEPS --optim $OPTIM\
-    --tune_stop $TUNE_STOP
+    --quick_thought_step $TUNE_STOP
     #${14} ${15} ${16} ${17} ${18} ${19} ${20}
 
 elif [ $MODE == "resume" ]
@@ -47,15 +52,13 @@ then
 echo "Resume training..."
 
 python -u $CODE_PATH/run.py --do_train \
-    #--do_valid \
-    #--do_test \
     --data_path $FULL_DATA_PATH \
+    -init $SAVE \
     #--encoder_type $MODEL \
     #--score_type_parser $PARSER_TYPE \
     #--score_type_predictor $PREDICTOR_TYPE\
     #-b $BATCH_SIZE -md $HIDDEN_DIM -ed $EMBEDDING_DIM \
     #-lr $LEARNING_RATE --max_steps $MAX_STEPS --warm_up_steps $WARM_UP_STEPS\
-    -init $SAVE \
 
 
 
