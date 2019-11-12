@@ -39,11 +39,21 @@ class TransformerEncoder(nn.Module):
             num_layers=n_layer,
             norm=nn.LayerNorm(d_model)
         )
+
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.ReLU(),
+            nn.Linear(d_model, d_model),
+            nn.LayerNorm(d_model)
+        )
         self.emb_dim = emb_dim
         self.d_model = d_model
 
         if emb_dim != d_model:
-            self.prejector = nn.Linear(emb_dim, d_model)
+            self.prejector = nn.Sequential(
+            nn.Linear(emb_dim, d_model),
+            nn.ReLU(),
+        )
 
     def forward(self,
                 src: T,
@@ -53,9 +63,9 @@ class TransformerEncoder(nn.Module):
         rep = self.positionemb(self.wordemb(src)).permute(1, 0, 2)
         if self.emb_dim != self.d_model:
             rep = self.prejector(rep)
-        rep = self.enc_layer(
+        rep = self.ffn(self.enc_layer(
             src=rep,
-            src_key_padding_mask=mask.eq(0)).permute(1, 0, 2)[:, 0, :]
+            src_key_padding_mask=mask.eq(0))).permute(1, 0, 2)[:, 0, :]
         if idx_list:
             rep = [torch.index_select(rep,
                                       dim=0,
